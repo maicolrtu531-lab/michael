@@ -185,7 +185,10 @@ func _throw_axe() -> void:
 # ── Timers ─────────────────────────────────────────────────────────────────
 func _handle_timers(delta: float) -> void:
 	if attack_cd    > 0: attack_cd    -= delta
-	if combo_timer  > 0: combo_timer  -= delta; else: combo_count = 0
+	if combo_timer  > 0:
+		combo_timer -= delta
+	else:
+		combo_count = 0
 	if invincible   > 0: invincible   -= delta
 	if rage_active  > 0: rage_active  -= delta
 	if rage_cd      > 0: rage_cd      -= delta
