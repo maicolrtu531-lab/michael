@@ -1,143 +1,151 @@
 extends CharacterBody3D
 
-# ── Stats ──────────────────────────────────────────────────────────────────
-@export var move_speed    : float = 6.0
-@export var sprint_speed  : float = 10.0
-@export var jump_force    : float = 8.0
-@export var gravity       : float = 20.0
-@export var max_hp        : int   = 150
-@export var max_mana      : int   = 80
-@export var base_damage   : int   = 25
-@export var defense       : int   = 5
+@export var move_speed  : float = 6.0
+@export var sprint_speed: float = 10.0
+@export var gravity_str : float = 20.0
+@export var max_hp      : int   = 150
+@export var max_mana    : int   = 80
+@export var base_damage : int   = 25
+@export var defense     : int   = 5
 
-var hp      : int
-var mana    : float
-var level   : int = 1
-var exp     : int = 0
-var gold    : int = 0
-var kills   : int = 0
-var potions : int = 3
-var stat_points : int = 0
+var hp          : int
+var mana        : float
+var level       : int   = 1
+var exp         : int   = 0
+var gold        : int   = 0
+var kills       : int   = 0
+var potions     : int   = 3
+var stat_points : int   = 0
 
-# ── Combat ─────────────────────────────────────────────────────────────────
-var combo_count    : int   = 0
-var combo_timer    : float = 0.0
-var attack_cd      : float = 0.0
-var is_attacking   : bool  = false
-var is_dodging     : bool  = false
-var dodge_timer    : float = 0.0
-var dodge_dir      : Vector3 = Vector3.ZERO
-var invincible     : float = 0.0
-var rage_active    : float = 0.0
-var rage_cd        : float = 0.0
-var axe_cd         : float = 0.0
-var blizzard_cd    : float = 0.0
-var mana_regen     : float = 3.0
+var combo_count  : int   = 0
+var combo_timer  : float = 0.0
+var attack_cd    : float = 0.0
+var is_attacking : bool  = false
+var is_dodging   : bool  = false
+var dodge_timer  : float = 0.0
+var dodge_dir    : Vector3 = Vector3.ZERO
+var invincible   : float = 0.0
+var rage_active  : float = 0.0
+var rage_cd      : float = 0.0
+var axe_cd       : float = 0.0
+var blizzard_cd  : float = 0.0
+var mana_regen   : float = 3.0
 
-# ── Lock-on ────────────────────────────────────────────────────────────────
-var locked_target  : Node3D = null
-var lock_range     : float  = 12.0
+# Camera stored as world-space angles so player body rotation doesn't affect it
+var cam_yaw   : float = 0.0
+var cam_pitch : float = -0.35   # ~-20 degrees
 
-# ── Signals ────────────────────────────────────────────────────────────────
+var locked_target : Node3D = null
+var lock_range    : float  = 14.0
+var melee_range   : float  = 2.5   # distance for melee hit detection
+
 signal health_changed(current, maximum)
 signal mana_changed(current, maximum)
 signal level_up(new_level)
 signal died
 signal enemy_killed
 
-# ── Nodes ──────────────────────────────────────────────────────────────────
-@onready var camera_arm   : SpringArm3D  = $CameraArm
-@onready var camera       : Camera3D     = $CameraArm/Camera3D
-@onready var mesh         : MeshInstance3D = $Body
-@onready var hit_area     : Area3D       = $HitArea
-@onready var anim         : AnimationPlayer = $AnimationPlayer if has_node("AnimationPlayer") else null
+@onready var camera_arm : SpringArm3D    = $CameraArm
+@onready var cam3d      : Camera3D       = $CameraArm/Camera3D
+@onready var mesh       : MeshInstance3D = $Body
 
 const AXE_SCENE = preload("res://scenes/player/axe_projectile.tscn")
 
 func _ready() -> void:
 	hp   = max_hp
 	mana = max_mana
+	add_to_group("player")
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and not locked_target:
-		camera_arm.rotation.y -= event.relative.x * 0.003
-		camera_arm.rotation.x -= event.relative.y * 0.003
-		camera_arm.rotation.x  = clamp(camera_arm.rotation.x, deg_to_rad(-60), deg_to_rad(10))
+		cam_yaw   -= event.relative.x * 0.003
+		cam_pitch  = clamp(cam_pitch - event.relative.y * 0.003,
+						   deg_to_rad(-70), deg_to_rad(15))
 
 	if event.is_action_pressed("lock_target"):
 		_toggle_lock()
 
 func _physics_process(delta: float) -> void:
-	_handle_gravity(delta)
+	_apply_gravity(delta)
+	_apply_camera(delta)
 	_handle_movement(delta)
-	_handle_combat(delta)
 	_handle_timers(delta)
-	_handle_lock_on(delta)
+	_handle_combat()
+	_handle_spells()
 	_regen_mana(delta)
 	move_and_slide()
 
-# ── Gravity ────────────────────────────────────────────────────────────────
-func _handle_gravity(delta: float) -> void:
+func _apply_gravity(delta: float) -> void:
 	if not is_on_floor():
-		velocity.y -= gravity * delta
+		velocity.y -= gravity_str * delta
+	else:
+		if velocity.y < 0:
+			velocity.y = -2.0
 
-# ── Movement ───────────────────────────────────────────────────────────────
+func _apply_camera(delta: float) -> void:
+	if locked_target and is_instance_valid(locked_target):
+		var to = locked_target.global_position - global_position
+		to.y = 0
+		if to.length() > 0.1:
+			cam_yaw = lerp_angle(cam_yaw, atan2(to.x, to.z) + PI, 6.0 * delta)
+	# Apply world-space camera angles independently of player body rotation
+	camera_arm.global_rotation.y = cam_yaw
+	camera_arm.rotation.x        = cam_pitch
+
 func _handle_movement(delta: float) -> void:
-	if is_attacking or is_dodging:
-		if is_dodging:
-			velocity.x = dodge_dir.x * sprint_speed * 1.4
-			velocity.z = dodge_dir.z * sprint_speed * 1.4
+	if is_dodging:
+		velocity.x = dodge_dir.x * sprint_speed * 1.5
+		velocity.z = dodge_dir.z * sprint_speed * 1.5
+		return
+	if is_attacking:
+		velocity.x = lerp(velocity.x, 0.0, 10.0 * delta)
+		velocity.z = lerp(velocity.z, 0.0, 10.0 * delta)
 		return
 
-	var input_dir = Vector2(
-		Input.get_axis("move_left", "move_right"),
-		Input.get_axis("move_forward", "move_backward")
-	)
+	var ix = Input.get_axis("move_left", "move_right")
+	var iz = Input.get_axis("move_forward", "move_backward")
+	var input_dir = Vector2(ix, iz)
 
-	var cam_basis = camera_arm.global_transform.basis
-	var move_dir  = (cam_basis.z * input_dir.y + cam_basis.x * input_dir.x).normalized()
-	move_dir.y    = 0
+	# Move relative to camera yaw (world-space)
+	var cy = cos(cam_yaw)
+	var sy = sin(cam_yaw)
+	var move_dir = Vector3(
+		sy * input_dir.y + cy * input_dir.x,
+		0,
+		cy * input_dir.y - sy * input_dir.x
+	).normalized()
 
 	var spd = sprint_speed if rage_active > 0 else move_speed
+
 	if move_dir.length() > 0.1:
 		velocity.x = move_dir.x * spd
 		velocity.z = move_dir.z * spd
-		# Face movement or locked target
-		var target_rot : Vector3
-		if locked_target:
-			var to_target = locked_target.global_position - global_position
-			to_target.y = 0
-			if to_target.length() > 0.1:
-				target_rot = to_target.normalized()
-		else:
-			target_rot = move_dir
-		if target_rot.length() > 0.1:
-			var angle = atan2(target_rot.x, target_rot.z)
-			var old_y = rotation.y
-			rotation.y = lerp_angle(rotation.y, angle, 12.0 * delta)
-			# Keep camera in world-space direction when player rotates
-			camera_arm.rotation.y -= (rotation.y - old_y)
+		# Face movement direction (or locked target)
+		var face_dir = move_dir
+		if locked_target and is_instance_valid(locked_target):
+			var to = locked_target.global_position - global_position
+			to.y = 0
+			if to.length() > 0.1:
+				face_dir = to.normalized()
+		rotation.y = lerp_angle(rotation.y, atan2(face_dir.x, face_dir.z), 14.0 * delta)
 	else:
-		velocity.x = lerp(velocity.x, 0.0, 12.0 * delta)
-		velocity.z = lerp(velocity.z, 0.0, 12.0 * delta)
+		velocity.x = lerp(velocity.x, 0.0, 14.0 * delta)
+		velocity.z = lerp(velocity.z, 0.0, 14.0 * delta)
 
-	# Dodge
-	if Input.is_action_just_pressed("dodge") and not is_dodging and attack_cd <= 0:
-		_start_dodge(move_dir)
+	if Input.is_action_just_pressed("dodge") and not is_dodging:
+		var dir = move_dir if move_dir.length() > 0.1 else -Vector3(sin(rotation.y), 0, cos(rotation.y))
+		_start_dodge(dir)
 
-# ── Dodge ──────────────────────────────────────────────────────────────────
 func _start_dodge(dir: Vector3) -> void:
 	is_dodging  = true
-	dodge_timer = 0.35
-	invincible  = 0.4
-	dodge_dir   = dir if dir.length() > 0.1 else -global_transform.basis.z
+	dodge_timer = 0.32
+	invincible  = 0.38
+	dodge_dir   = dir
 
-# ── Combat ─────────────────────────────────────────────────────────────────
-func _handle_combat(_delta: float) -> void:
+func _handle_combat() -> void:
 	if attack_cd > 0 or is_dodging:
 		return
-
 	if Input.is_action_just_pressed("attack_light"):
 		_melee_attack(false)
 	elif Input.is_action_just_pressed("attack_heavy"):
@@ -147,117 +155,124 @@ func _handle_combat(_delta: float) -> void:
 	elif Input.is_action_just_pressed("use_potion"):
 		use_potion()
 
-	# Hechizos
+func _handle_spells() -> void:
+	# Spells use separate cooldowns — not blocked by attack_cd
 	if Input.is_action_just_pressed("blizzard"):
 		_blizzard()
 	if Input.is_action_just_pressed("spartan_rage"):
-		spartan_rage()
+		_spartan_rage()
 
 func _melee_attack(heavy: bool) -> void:
 	if combo_timer > 0:
 		combo_count = (combo_count + 1) % 3
 	else:
 		combo_count = 0
-	combo_timer  = 0.5
+	combo_timer  = 0.55
 	attack_cd    = 0.35 if not heavy else 0.6
 	is_attacking = true
 
-	var dmg_mult = 1.0
-	if heavy:          dmg_mult = 2.0
+	var dmg_mult = 2.0 if heavy else 1.0
 	if combo_count == 2: dmg_mult *= 1.5
 	if rage_active > 0:  dmg_mult *= 1.5
-
 	var dmg = int(base_damage * dmg_mult)
 
-	# Hit enemies in front
-	for body in hit_area.get_overlapping_bodies():
-		if body.is_in_group("enemy"):
-			var kb = (body.global_position - global_position).normalized() * 6.0
-			body.take_damage(dmg, kb)
-			# Spawn floating damage text
-			_spawn_damage_text(body.global_position, dmg, Color.RED)
+	# Direct distance check — no collision layers needed
+	var forward = Vector3(sin(rotation.y), 0, cos(rotation.y))
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e):
+			continue
+		var diff = e.global_position - global_position
+		diff.y = 0
+		var dist = diff.length()
+		if dist > melee_range:
+			continue
+		# Must be roughly in front (dot product > -0.3 = ~100° arc)
+		if dist > 0.5 and forward.dot(diff.normalized()) < -0.3:
+			continue
+		var kb = diff.normalized() * 7.0
+		e.take_damage(dmg, kb)
 
 func _throw_axe() -> void:
 	if axe_cd > 0 or mana < 15:
 		return
-	axe_cd  = 1.5
-	mana   -= 15
+	axe_cd = 1.5
+	mana  -= 15
 	emit_signal("mana_changed", int(mana), max_mana)
-
 	var axe = AXE_SCENE.instantiate()
 	get_parent().add_child(axe)
-	axe.global_position = global_position + Vector3(0, 1, 0)
-	var fwd = -global_transform.basis.z
-	if locked_target:
+	axe.global_position = global_position + Vector3(0, 1.2, 0)
+	var fwd = Vector3(sin(rotation.y), 0, cos(rotation.y))
+	if locked_target and is_instance_valid(locked_target):
 		fwd = (locked_target.global_position - global_position).normalized()
+		fwd.y = 0
+		fwd = fwd.normalized()
 	axe.launch(fwd, int(base_damage * 2.5))
 
-# ── Timers ─────────────────────────────────────────────────────────────────
+func _blizzard() -> void:
+	if blizzard_cd > 0 or mana < 25:
+		return
+	blizzard_cd = 5.0
+	mana -= 25
+	emit_signal("mana_changed", int(mana), max_mana)
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e):
+			continue
+		if global_position.distance_to(e.global_position) < 9.0:
+			e.take_damage(int(base_damage * 1.8), Vector3.ZERO)
+			if e.has_method("freeze"):
+				e.freeze(1.8)
+
+func _spartan_rage() -> void:
+	if rage_cd > 0 or mana < 30:
+		return
+	rage_cd     = 12.0
+	rage_active = 6.0
+	mana       -= 30
+	emit_signal("mana_changed", int(mana), max_mana)
+
 func _handle_timers(delta: float) -> void:
-	if attack_cd    > 0: attack_cd    -= delta
-	if combo_timer  > 0:
-		combo_timer -= delta
-	else:
-		combo_count = 0
-	if invincible   > 0: invincible   -= delta
-	if rage_active  > 0: rage_active  -= delta
-	if rage_cd      > 0: rage_cd      -= delta
-	if axe_cd       > 0: axe_cd       -= delta
-	if blizzard_cd  > 0: blizzard_cd  -= delta
-	if dodge_timer  > 0:
+	if attack_cd   > 0: attack_cd   -= delta
+	if combo_timer > 0: combo_timer -= delta
+	else:               combo_count  = 0
+	if invincible  > 0: invincible  -= delta
+	if rage_active > 0: rage_active -= delta
+	if rage_cd     > 0: rage_cd     -= delta
+	if axe_cd      > 0: axe_cd      -= delta
+	if blizzard_cd > 0: blizzard_cd -= delta
+	if dodge_timer > 0:
 		dodge_timer -= delta
 		if dodge_timer <= 0:
 			is_dodging = false
-	if attack_cd    <= 0: is_attacking = false
+	if attack_cd <= 0:
+		is_attacking = false
 
-# ── Mana regen ─────────────────────────────────────────────────────────────
 func _regen_mana(delta: float) -> void:
 	if mana < max_mana:
 		mana = min(max_mana, mana + mana_regen * delta)
 		emit_signal("mana_changed", int(mana), max_mana)
 
-# ── Lock-on ────────────────────────────────────────────────────────────────
 func _toggle_lock() -> void:
 	if locked_target:
 		locked_target = null
 		return
-	var enemies = get_tree().get_nodes_in_group("enemy")
-	var closest : Node3D = null
-	var closest_dist : float = lock_range
-	for e in enemies:
+	var best  : Node3D = null
+	var bdist : float  = lock_range
+	for e in get_tree().get_nodes_in_group("enemy"):
 		var d = global_position.distance_to(e.global_position)
-		if d < closest_dist:
-			closest_dist = d
-			closest = e
-	locked_target = closest
+		if d < bdist:
+			bdist = d
+			best  = e
+	locked_target = best
 
-func _handle_lock_on(delta: float) -> void:
-	if not locked_target:
-		return
-	if not is_instance_valid(locked_target) or locked_target.global_position.distance_to(global_position) > lock_range + 3:
-		locked_target = null
-		return
-	# Rotate camera toward target
-	var to = locked_target.global_position - camera_arm.global_position
-	var angle_y = atan2(to.x, to.z)
-	camera_arm.rotation.y = lerp_angle(camera_arm.rotation.y, angle_y, 5.0 * delta)
-
-# ── Damage / Death ─────────────────────────────────────────────────────────
 func take_damage(amount: int) -> void:
 	if invincible > 0:
 		return
-	var reduced = max(1, amount - defense)
-	hp -= reduced
+	hp -= max(1, amount - defense)
 	invincible = 0.5
 	emit_signal("health_changed", hp, max_hp)
 	if hp <= 0:
-		_die()
+		emit_signal("died")
 
-func _die() -> void:
-	emit_signal("died")
-	# Respawn or game over handled by GameManager
-
-# ── Potion ────────────────────────────────────────────────────────────────
 func use_potion() -> void:
 	if potions <= 0 or hp >= max_hp:
 		return
@@ -265,11 +280,10 @@ func use_potion() -> void:
 	hp = min(max_hp, hp + 60)
 	emit_signal("health_changed", hp, max_hp)
 
-# ── EXP / Level ───────────────────────────────────────────────────────────
 func gain_exp(amount: int) -> void:
 	exp += amount
 	while exp >= _exp_needed():
-		exp -= exp_needed()
+		exp -= _exp_needed()
 		_level_up()
 
 func _exp_needed() -> int:
@@ -286,40 +300,14 @@ func _level_up() -> void:
 	emit_signal("level_up", level)
 	emit_signal("health_changed", hp, max_hp)
 
-# ── Kill reward ────────────────────────────────────────────────────────────
-func on_enemy_killed(exp_reward: int, gold_reward: int, mana_reward: float = 8.0) -> void:
+func on_enemy_killed(exp_r: int, gold_r: int, mana_r: float = 8.0) -> void:
 	kills += 1
-	gold  += gold_reward
-	gain_exp(exp_reward)
-	mana = min(max_mana, mana + mana_reward)
+	gold  += gold_r
+	gain_exp(exp_r)
+	mana = min(max_mana, mana + mana_r)
 	emit_signal("mana_changed", int(mana), max_mana)
 	emit_signal("enemy_killed")
 
-# ── Spartan Rage ──────────────────────────────────────────────────────────
-func _blizzard() -> void:
-	if blizzard_cd > 0 or mana < 25:
-		return
-	blizzard_cd = 4.0
-	mana -= 25
-	emit_signal("mana_changed", int(mana), max_mana)
-	# Daño en área a todos los enemigos cercanos
-	var enemies = get_tree().get_nodes_in_group("enemy")
-	for e in enemies:
-		var d = global_position.distance_to(e.global_position)
-		if d < 8.0 and e.has_method("take_damage"):
-			var kb = (e.global_position - global_position).normalized() * 5.0
-			e.take_damage(int(base_damage * 1.5), kb)
-		if e.has_method("freeze"):
-			e.freeze(1.5)
-
 func spartan_rage() -> bool:
-	if rage_cd > 0 or mana < 30:
-		return false
-	rage_cd    = 10.0
-	rage_active = 5.0
-	mana       -= 30
-	emit_signal("mana_changed", int(mana), max_mana)
-	return true
-
-func _spawn_damage_text(_pos: Vector3, _dmg: int, _color: Color) -> void:
-	pass  # Implementado en GameManager via señal
+	_spartan_rage()
+	return rage_active > 0
