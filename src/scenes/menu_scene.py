@@ -11,6 +11,12 @@ class MenuScene:
         self.selected   = 0
         self.show_controls = False
 
+    def _option_rect(self, i):
+        lbl = self.font_sub.render("   " + self.options[i], True, GOLD)
+        x = SCREEN_WIDTH//2 - lbl.get_width()//2
+        y = 300 + i * 60
+        return pygame.Rect(x, y, lbl.get_width(), lbl.get_height())
+
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
             if self.show_controls:
@@ -21,10 +27,30 @@ class MenuScene:
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self.selected = (self.selected + 1) % len(self.options)
             elif event.key == pygame.K_RETURN:
-                choice = self.options[self.selected]
-                if choice == "COMENZAR AVENTURA": return SCENE_GAME
-                if choice == "CONTROLES":         self.show_controls = True
-                if choice == "SALIR":             return "quit"
+                return self._select(self.selected)
+
+        elif event.type == pygame.MOUSEMOTION and not self.show_controls:
+            mx, my = event.pos
+            for i in range(len(self.options)):
+                if self._option_rect(i).collidepoint(mx, my):
+                    self.selected = i
+
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.show_controls:
+                self.show_controls = False
+                return None
+            mx, my = event.pos
+            for i in range(len(self.options)):
+                if self._option_rect(i).collidepoint(mx, my):
+                    return self._select(i)
+
+        return None
+
+    def _select(self, i):
+        choice = self.options[i]
+        if choice == "COMENZAR AVENTURA": return SCENE_GAME
+        if choice == "CONTROLES":         self.show_controls = True
+        if choice == "SALIR":             return "quit"
         return None
 
     def update(self):
