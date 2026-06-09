@@ -1,17 +1,12 @@
 extends Node
 
-# Manages waves, NPCs, scene transitions
-@export var wave_definitions : Array = []
-
 var current_wave : int  = 0
 var enemies_alive: int  = 0
 var wave_timer   : float = 0.0
 var between_waves: bool  = false
 
-@onready var player    : CharacterBody3D = $Player
-@onready var hud       : CanvasLayer     = $HUD
-@onready var stats_ui  : CanvasLayer     = $StatsMenu
-@onready var spawn_points : Node3D       = $SpawnPoints
+var player    : Node3D = null
+var spawn_points : Node3D = null
 
 signal wave_started(wave_number)
 signal wave_cleared(wave_number)
@@ -23,17 +18,18 @@ const BERSERKER = preload("res://scenes/enemies/berserker.tscn")
 const BALDUR    = preload("res://scenes/enemies/baldur_boss.tscn")
 
 var WAVES : Array = [
-	[{scene=null, type="Draugr",    count=4}],
-	[{scene=null, type="Draugr",    count=4}, {scene=null, type="Berserker", count=2}],
-	[{scene=null, type="Berserker", count=3}, {scene=null, type="Draugr",    count=3}],
-	[{scene=null, type="Draugr",    count=5}, {scene=null, type="Berserker", count=3}],
-	[{scene=null, type="Baldur",    count=1}],
+	[{"type": "Draugr",    "count": 4}],
+	[{"type": "Draugr",    "count": 4}, {"type": "Berserker", "count": 2}],
+	[{"type": "Berserker", "count": 3}, {"type": "Draugr",    "count": 3}],
+	[{"type": "Draugr",    "count": 5}, {"type": "Berserker", "count": 3}],
+	[{"type": "Baldur",    "count": 1}],
 ]
 
 func _ready() -> void:
-	hud.connect_player(player)
-	stats_ui.connect_player(player)
-	player.died.connect(_on_player_died)
+	player       = get_node_or_null("Player")
+	spawn_points = get_node_or_null("SpawnPoints")
+	if player and player.has_signal("died"):
+		player.died.connect(_on_player_died)
 	_start_wave(0)
 
 func _process(delta: float) -> void:
@@ -48,12 +44,8 @@ func _process(delta: float) -> void:
 				_start_wave(current_wave)
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):  # M key mapped separately
-		pass
 	if event is InputEventKey and event.pressed:
-		if event.keycode == KEY_M:
-			stats_ui.toggle()
-		elif event.keycode == KEY_ESCAPE:
+		if event.keycode == KEY_ESCAPE:
 			get_tree().quit()
 
 func _start_wave(wave_idx: int) -> void:
@@ -61,13 +53,11 @@ func _start_wave(wave_idx: int) -> void:
 	var wave = WAVES[wave_idx]
 	enemies_alive = 0
 	for group in wave:
-		for i in range(group.count):
-			var enemy = _spawn_enemy(group.type)
+		for i in range(group["count"]):
+			var enemy = _spawn_enemy(group["type"])
 			if enemy:
 				enemies_alive += 1
 				enemy.died.connect(_on_enemy_died)
-				if group.type == "Baldur":
-					hud.show_boss(enemy)
 
 func _spawn_enemy(type: String) -> Node:
 	var scene = null
@@ -80,19 +70,15 @@ func _spawn_enemy(type: String) -> Node:
 
 	var enemy = scene.instantiate()
 	add_child(enemy)
-
-	# Random spawn point away from player
-	var sp = _get_spawn_point()
-	enemy.global_position = sp
+	enemy.global_position = _get_spawn_point()
 	return enemy
 
 func _get_spawn_point() -> Vector3:
-	var points = spawn_points.get_children()
-	if points.size() > 0:
-		var sp = points[randi() % points.size()]
-		return sp.global_position
-	# Fallback: random position
-	return Vector3(randf_range(-20, 20), 0, randf_range(-20, 20))
+	if spawn_points:
+		var points = spawn_points.get_children()
+		if points.size() > 0:
+			return points[randi() % points.size()].global_position
+	return Vector3(randf_range(-20, 20), 1, randf_range(-20, 20))
 
 func _on_enemy_died(_enemy: Node) -> void:
 	enemies_alive -= 1
