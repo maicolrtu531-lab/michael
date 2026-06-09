@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1"]
 
@@ -10,39 +10,71 @@ height = 1.7
 radius = 0.28
 height = 0.9
 
+[sub_resource type="FastNoiseLite" id="Noise_armor"]
+noise_type = 2
+seed = 5
+frequency = 0.4
+
+[sub_resource type="NoiseTexture2D" id="ArmorTex"]
+width = 256
+height = 256
+seamless = true
+noise = SubResource("Noise_armor")
+
 [sub_resource type="StandardMaterial3D" id="Mat_body"]
-albedo_color = Color(0.55, 0.25, 0.1, 1)
+albedo_color = Color(0.25, 0.18, 0.08, 1)
+albedo_texture = SubResource("ArmorTex")
+metallic = 0.55
+metallic_specular = 0.7
+roughness = 0.45
+emission_enabled = true
+emission = Color(0.4, 0.1, 0.0, 1)
+emission_energy_multiplier = 0.3
 
 [sub_resource type="SphereMesh" id="Head_mesh"]
 radius = 0.22
 height = 0.44
 
 [sub_resource type="StandardMaterial3D" id="Mat_skin"]
-albedo_color = Color(0.85, 0.65, 0.45, 1)
+albedo_color = Color(0.82, 0.6, 0.42, 1)
+roughness = 0.8
+metallic = 0.0
 
 [sub_resource type="BoxMesh" id="Sword_mesh"]
-size = Vector3(0.07, 0.9, 0.07)
+size = Vector3(0.07, 0.95, 0.06)
 
 [sub_resource type="StandardMaterial3D" id="Mat_sword"]
-albedo_color = Color(0.75, 0.8, 0.85, 1)
-metallic = 0.9
-roughness = 0.15
+albedo_color = Color(0.85, 0.9, 0.95, 1)
+metallic = 1.0
+roughness = 0.08
+emission_enabled = true
+emission = Color(0.5, 0.7, 1.0, 1)
+emission_energy_multiplier = 0.6
 
 [sub_resource type="BoxMesh" id="Shield_mesh"]
-size = Vector3(0.55, 0.65, 0.07)
+size = Vector3(0.52, 0.62, 0.07)
 
 [sub_resource type="StandardMaterial3D" id="Mat_shield"]
-albedo_color = Color(0.3, 0.2, 0.1, 1)
-metallic = 0.4
+albedo_color = Color(0.2, 0.15, 0.08, 1)
+metallic = 0.6
+roughness = 0.4
+emission_enabled = true
+emission = Color(0.8, 0.4, 0.0, 1)
+emission_energy_multiplier = 0.4
 
 [sub_resource type="BoxMesh" id="Cape_mesh"]
-size = Vector3(0.5, 0.7, 0.04)
+size = Vector3(0.5, 0.72, 0.04)
 
 [sub_resource type="StandardMaterial3D" id="Mat_cape"]
-albedo_color = Color(0.6, 0.05, 0.05, 1)
+albedo_color = Color(0.55, 0.04, 0.04, 1)
+roughness = 0.9
+metallic = 0.0
+emission_enabled = true
+emission = Color(0.3, 0.0, 0.0, 1)
+emission_energy_multiplier = 0.2
 
 [sub_resource type="SphereShape3D" id="HitShape_1"]
-radius = 2.0
+radius = 2.2
 
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1")

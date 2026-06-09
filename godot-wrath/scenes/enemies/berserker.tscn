@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/enemies/berserker.gd" id="1"]
 
@@ -10,11 +10,25 @@ height = 1.6
 radius = 0.38
 height = 1.6
 
+[sub_resource type="FastNoiseLite" id="Noise_b"]
+noise_type = 2
+seed = 33
+frequency = 0.35
+
+[sub_resource type="NoiseTexture2D" id="BersTex"]
+width = 256
+height = 256
+seamless = true
+noise = SubResource("Noise_b")
+
 [sub_resource type="StandardMaterial3D" id="Mat_berserker"]
-albedo_color = Color(1.0, 0.45, 0.0, 1)
+albedo_color = Color(0.9, 0.3, 0.0, 1)
+albedo_texture = SubResource("BersTex")
+metallic = 0.3
+roughness = 0.5
 emission_enabled = true
-emission = Color(0.8, 0.2, 0.0, 1)
-emission_energy_multiplier = 0.6
+emission = Color(1.0, 0.3, 0.0, 1)
+emission_energy_multiplier = 1.0
 
 [node name="Berserker" type="CharacterBody3D"]
 script = ExtResource("1")

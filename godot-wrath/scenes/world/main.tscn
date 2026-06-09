@@ -1,22 +1,63 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/game_manager.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3"]
 
+[sub_resource type="FastNoiseLite" id="Noise_ground"]
+noise_type = 1
+seed = 42
+frequency = 0.08
+fractal_octaves = 4
+
+[sub_resource type="NoiseTexture2D" id="GroundTex"]
+width = 512
+height = 512
+seamless = true
+noise = SubResource("Noise_ground")
+
+[sub_resource type="FastNoiseLite" id="Noise_normal"]
+noise_type = 1
+seed = 99
+frequency = 0.12
+fractal_octaves = 3
+
+[sub_resource type="NoiseTexture2D" id="GroundNormal"]
+width = 512
+height = 512
+seamless = true
+as_normal_map = true
+noise = SubResource("Noise_normal")
+
 [sub_resource type="PlaneMesh" id="PlaneMesh_1"]
 size = Vector2(60, 60)
+subdivide_width = 8
+subdivide_depth = 8
 
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
-albedo_color = Color(0.22, 0.32, 0.18, 1)
-roughness = 0.9
+albedo_color = Color(0.18, 0.28, 0.12, 1)
+albedo_texture = SubResource("GroundTex")
+normal_enabled = true
+normal_texture = SubResource("GroundNormal")
+normal_scale = 1.5
+roughness = 0.95
+metallic = 0.0
 
 [sub_resource type="WorldBoundaryShape3D" id="WorldBound_1"]
 
+[sub_resource type="FastNoiseLite" id="Noise_sky"]
+noise_type = 0
+seed = 7
+frequency = 0.02
+
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
-sky_top_color = Color(0.05, 0.05, 0.12, 1)
-sky_horizon_color = Color(0.22, 0.1, 0.05, 1)
-ground_horizon_color = Color(0.15, 0.08, 0.04, 1)
+sky_top_color = Color(0.03, 0.03, 0.1, 1)
+sky_horizon_color = Color(0.18, 0.08, 0.04, 1)
+sky_curve = 0.15
+ground_bottom_color = Color(0.05, 0.03, 0.02, 1)
+ground_horizon_color = Color(0.12, 0.06, 0.03, 1)
+sun_angle_max = 30.0
+sun_curve = 0.3
 
 [sub_resource type="Sky" id="Sky_1"]
 sky_material = SubResource("SkyMat_1")
@@ -25,11 +66,15 @@ sky_material = SubResource("SkyMat_1")
 background_mode = 2
 sky = SubResource("Sky_1")
 ambient_light_source = 2
-ambient_light_color = Color(0.3, 0.3, 0.4, 1)
-ambient_light_energy = 0.5
+ambient_light_color = Color(0.2, 0.2, 0.35, 1)
+ambient_light_energy = 0.6
 fog_enabled = true
-fog_light_color = Color(0.1, 0.1, 0.15, 1)
-fog_density = 0.005
+fog_light_color = Color(0.08, 0.06, 0.12, 1)
+fog_density = 0.006
+fog_aerial_perspective = 0.3
+glow_enabled = true
+glow_intensity = 0.4
+glow_bloom = 0.1
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1")
@@ -38,10 +83,17 @@ script = ExtResource("1")
 environment = SubResource("Env_1")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.866, -0.353, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 10, 0)
-light_color = Color(1.0, 0.9, 0.7, 1)
-light_energy = 1.2
+transform = Transform3D(0.866, -0.353, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 12, 0)
+light_color = Color(0.9, 0.75, 0.55, 1)
+light_energy = 1.5
 shadow_enabled = true
+shadow_bias = 0.05
+
+[node name="OmniLight_ambient" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+light_color = Color(0.3, 0.2, 0.5, 1)
+light_energy = 0.8
+omni_range = 40.0
 
 [node name="Ground" type="StaticBody3D" parent="."]
 
@@ -83,5 +135,3 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, -15)
 
 [node name="SP8" type="Marker3D" parent="SpawnPoints"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0, 15)
-
-[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
