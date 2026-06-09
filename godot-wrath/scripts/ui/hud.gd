@@ -1,114 +1,145 @@
 extends CanvasLayer
 
-@onready var hp_bar       : ProgressBar = $Panel/HPBar
-@onready var mana_bar     : ProgressBar = $Panel/ManaBar
-@onready var exp_bar      : ProgressBar = $Panel/EXPBar
-@onready var hp_label     : Label       = $Panel/HPBar/Label
-@onready var mana_label   : Label       = $Panel/ManaBar/Label
-@onready var level_label  : Label       = $Panel/LevelLabel
-@onready var kills_label  : Label       = $Panel/KillsLabel
-@onready var gold_label   : Label       = $Panel/GoldLabel
-@onready var potions_label: Label       = $Panel/PotionsLabel
-@onready var boss_bar_panel : Control   = $BossBar
-@onready var boss_hp_bar  : ProgressBar = $BossBar/HPBar
-@onready var boss_name_lbl: Label       = $BossBar/NameLabel
-@onready var level_up_lbl : Label       = $LevelUpLabel
-@onready var stat_hint    : Label       = $StatHintLabel
-@onready var lock_indicator : Control  = $LockIndicator
-@onready var crosshair    : TextureRect = $Crosshair
-
-var player : Node = null
-var blink_t : float = 0.0
+var hp_bar     : ProgressBar
+var mana_bar   : ProgressBar
+var hp_label   : Label
+var mana_label : Label
+var wave_label : Label
+var kills_label: Label
+var level_label: Label
+var gold_label : Label
+var msg_label  : Label
+var msg_timer  : float = 0.0
+var kill_count : int   = 0
 
 func _ready() -> void:
-	boss_bar_panel.visible = false
-	level_up_lbl.visible   = false
-	level_up_lbl.modulate.a = 0.0
+	_build_ui()
 
-func connect_player(p: Node) -> void:
-	player = p
-	p.health_changed.connect(_on_health_changed)
-	p.mana_changed.connect(_on_mana_changed)
-	p.level_up.connect(_on_level_up)
-	_refresh_all()
+func _build_ui() -> void:
+	var panel = PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	panel.position = Vector2(10, -130)
+	add_child(panel)
+
+	var vbox = VBoxContainer.new()
+	vbox.custom_minimum_size = Vector2(230, 0)
+	panel.add_child(vbox)
+
+	hp_label = Label.new()
+	hp_label.text = "HP: 150 / 150"
+	vbox.add_child(hp_label)
+
+	hp_bar = ProgressBar.new()
+	hp_bar.custom_minimum_size = Vector2(210, 18)
+	hp_bar.max_value = 150
+	hp_bar.value = 150
+	hp_bar.show_percentage = false
+	var hp_style = StyleBoxFlat.new()
+	hp_style.bg_color = Color(0.8, 0.1, 0.1, 1)
+	hp_bar.add_theme_stylebox_override("fill", hp_style)
+	vbox.add_child(hp_bar)
+
+	mana_label = Label.new()
+	mana_label.text = "MANA: 80 / 80"
+	vbox.add_child(mana_label)
+
+	mana_bar = ProgressBar.new()
+	mana_bar.custom_minimum_size = Vector2(210, 18)
+	mana_bar.max_value = 80
+	mana_bar.value = 80
+	mana_bar.show_percentage = false
+	var mana_style = StyleBoxFlat.new()
+	mana_style.bg_color = Color(0.1, 0.3, 0.9, 1)
+	mana_bar.add_theme_stylebox_override("fill", mana_style)
+	vbox.add_child(mana_bar)
+
+	var top_right = PanelContainer.new()
+	top_right.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	top_right.position = Vector2(-220, 10)
+	add_child(top_right)
+
+	var tvbox = VBoxContainer.new()
+	tvbox.custom_minimum_size = Vector2(200, 0)
+	top_right.add_child(tvbox)
+
+	level_label = Label.new()
+	level_label.text = "Level 1"
+	tvbox.add_child(level_label)
+
+	gold_label = Label.new()
+	gold_label.text = "Gold: 0"
+	tvbox.add_child(gold_label)
+
+	kills_label = Label.new()
+	kills_label.text = "Kills: 0"
+	tvbox.add_child(kills_label)
+
+	wave_label = Label.new()
+	wave_label.text = "Wave 1"
+	wave_label.set_anchors_preset(Control.PRESET_TOP_CENTER)
+	wave_label.position = Vector2(-50, 10)
+	wave_label.add_theme_font_size_override("font_size", 24)
+	add_child(wave_label)
+
+	var hint = Label.new()
+	hint.text = "[LMB] Ataque  [RMB] Pesado  [E] Hacha  [SPACE] Esquivar  [F] Poción  [T] Lock"
+	hint.set_anchors_preset(Control.PRESET_BOTTOM_CENTER)
+	hint.position = Vector2(-300, -20)
+	hint.add_theme_font_size_override("font_size", 11)
+	add_child(hint)
+
+	msg_label = Label.new()
+	msg_label.text = ""
+	msg_label.set_anchors_preset(Control.PRESET_CENTER)
+	msg_label.position = Vector2(-100, -20)
+	msg_label.add_theme_font_size_override("font_size", 28)
+	add_child(msg_label)
 
 func _process(delta: float) -> void:
-	blink_t += delta
-	if player:
-		_update_exp()
-		_update_labels()
-		_update_stat_hint()
-		_update_lock_indicator()
+	if msg_timer > 0:
+		msg_timer -= delta
+		if msg_timer <= 0:
+			msg_label.text = ""
 
-func _refresh_all() -> void:
+func connect_player(player: Node) -> void:
 	if not player:
 		return
-	_on_health_changed(player.hp, player.max_hp)
+	if player.has_signal("health_changed"):
+		player.health_changed.connect(_on_hp_changed)
+	if player.has_signal("mana_changed"):
+		player.mana_changed.connect(_on_mana_changed)
+	if player.has_signal("level_up"):
+		player.level_up.connect(_on_level_up)
+	if player.has_signal("enemy_killed"):
+		player.enemy_killed.connect(_on_kill)
+	_on_hp_changed(player.hp, player.max_hp)
 	_on_mana_changed(int(player.mana), player.max_mana)
 
-func _on_health_changed(current: int, maximum: int) -> void:
+func _on_hp_changed(cur: int, maximum: int) -> void:
 	hp_bar.max_value = maximum
-	hp_bar.value     = current
-	hp_label.text    = "%d / %d" % [current, maximum]
+	hp_bar.value     = cur
+	hp_label.text    = "HP: %d / %d" % [cur, maximum]
 
-func _on_mana_changed(current: int, maximum: int) -> void:
+func _on_mana_changed(cur: int, maximum: int) -> void:
 	mana_bar.max_value = maximum
-	mana_bar.value     = current
-	mana_label.text    = "%d / %d" % [current, maximum]
-
-func _update_exp() -> void:
-	exp_bar.max_value = player.exp_needed()
-	exp_bar.value     = player.exp
-
-func _update_labels() -> void:
-	level_label.text   = "Nv. %d" % player.level
-	kills_label.text   = "☠ %d" % player.kills
-	gold_label.text    = "🪙 %d" % player.gold
-	potions_label.text = "🧪 %d" % player.potions
-
-func _update_stat_hint() -> void:
-	if player.stat_points > 0:
-		stat_hint.visible = true
-		stat_hint.modulate.a = 0.5 + 0.5 * sin(blink_t * 4.0)
-		stat_hint.text = "M — %d puntos de estadística disponibles" % player.stat_points
-	else:
-		stat_hint.visible = false
-
-func _update_lock_indicator() -> void:
-	if not player.locked_target or not is_instance_valid(player.locked_target):
-		lock_indicator.visible = false
-		return
-	lock_indicator.visible = true
-	var cam = get_viewport().get_camera_3d()
-	if cam:
-		var screen_pos = cam.unproject_position(player.locked_target.global_position)
-		lock_indicator.global_position = screen_pos - lock_indicator.size / 2
-
-func show_boss(boss_node: Node) -> void:
-	boss_bar_panel.visible = true
-	boss_name_lbl.text     = boss_node.enemy_name
-	boss_node.died.connect(_on_boss_died)
-	# Update boss bar each frame via timer
-	var t = Timer.new()
-	add_child(t)
-	t.wait_time = 0.05
-	t.timeout.connect(func():
-		if is_instance_valid(boss_node):
-			boss_hp_bar.max_value = boss_node.max_hp
-			boss_hp_bar.value     = boss_node.hp
-		else:
-			t.queue_free()
-	)
-	t.autostart = true
-
-func _on_boss_died(_b) -> void:
-	boss_bar_panel.visible = false
+	mana_bar.value     = cur
+	mana_label.text    = "MANA: %d / %d" % [cur, maximum]
 
 func _on_level_up(new_level: int) -> void:
-	level_up_lbl.text    = "¡NIVEL %d!" % new_level
-	level_up_lbl.visible = true
-	var tween = create_tween()
-	tween.tween_property(level_up_lbl, "modulate:a", 1.0, 0.3)
-	tween.tween_interval(1.2)
-	tween.tween_property(level_up_lbl, "modulate:a", 0.0, 0.5)
-	tween.tween_callback(func(): level_up_lbl.visible = false)
+	level_label.text = "Level %d" % new_level
+	show_message("LEVEL UP!", Color.YELLOW)
+
+func _on_kill() -> void:
+	kill_count += 1
+	kills_label.text = "Kills: %d" % kill_count
+
+func show_message(text: String, color: Color = Color.WHITE) -> void:
+	msg_label.text = text
+	msg_label.add_theme_color_override("font_color", color)
+	msg_timer = 2.5
+
+func update_wave(wave_num: int) -> void:
+	wave_label.text = "Wave %d" % wave_num
+
+func update_gold(amount: int) -> void:
+	gold_label.text = "Gold: %d" % amount

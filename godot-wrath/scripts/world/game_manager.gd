@@ -1,11 +1,13 @@
 extends Node
 
-var current_wave : int  = 0
-var enemies_alive: int  = 0
-var wave_timer   : float = 0.0
-var between_waves: bool  = false
+var current_wave  : int   = 0
+var enemies_alive : int   = 0
+var wave_timer    : float = 0.0
+var between_waves : bool  = false
+var total_gold    : int   = 0
 
-var player    : Node3D = null
+var player       : Node3D = null
+var hud          : CanvasLayer = null
 var spawn_points : Node3D = null
 
 signal wave_started(wave_number)
@@ -27,9 +29,19 @@ var WAVES : Array = [
 
 func _ready() -> void:
 	player       = get_node_or_null("Player")
+	hud          = get_node_or_null("HUD")
 	spawn_points = get_node_or_null("SpawnPoints")
-	if player and player.has_signal("died"):
-		player.died.connect(_on_player_died)
+
+	if player:
+		if player.has_signal("died"):
+			player.died.connect(_on_player_died)
+		if player.has_signal("enemy_killed"):
+			player.enemy_killed.connect(_on_enemy_kill_gold)
+
+	if hud and player:
+		hud.connect_player(player)
+
+	await get_tree().create_timer(0.5).timeout
 	_start_wave(0)
 
 func _process(delta: float) -> void:
@@ -39,7 +51,7 @@ func _process(delta: float) -> void:
 			between_waves = false
 			current_wave += 1
 			if current_wave >= WAVES.size():
-				emit_signal("victory")
+				_victory()
 			else:
 				_start_wave(current_wave)
 
@@ -50,6 +62,10 @@ func _input(event: InputEvent) -> void:
 
 func _start_wave(wave_idx: int) -> void:
 	emit_signal("wave_started", wave_idx + 1)
+	if hud:
+		hud.update_wave(wave_idx + 1)
+		hud.show_message("OLEADA %d" % (wave_idx + 1), Color.ORANGE)
+
 	var wave = WAVES[wave_idx]
 	enemies_alive = 0
 	for group in wave:
@@ -60,7 +76,7 @@ func _start_wave(wave_idx: int) -> void:
 				enemy.died.connect(_on_enemy_died)
 
 func _spawn_enemy(type: String) -> Node:
-	var scene = null
+	var scene : PackedScene = null
 	match type:
 		"Draugr":    scene = DRAUGR
 		"Berserker": scene = BERSERKER
@@ -75,19 +91,34 @@ func _spawn_enemy(type: String) -> Node:
 
 func _get_spawn_point() -> Vector3:
 	if spawn_points:
-		var points = spawn_points.get_children()
-		if points.size() > 0:
-			return points[randi() % points.size()].global_position
-	return Vector3(randf_range(-20, 20), 1, randf_range(-20, 20))
+		var pts = spawn_points.get_children()
+		if pts.size() > 0:
+			return pts[randi() % pts.size()].global_position + Vector3(0, 1, 0)
+	return Vector3(randf_range(-18, 18), 1, randf_range(-18, 18))
 
 func _on_enemy_died(_enemy: Node) -> void:
 	enemies_alive -= 1
 	if enemies_alive <= 0:
 		emit_signal("wave_cleared", current_wave + 1)
+		if hud:
+			hud.show_message("OLEADA COMPLETADA!", Color.GREEN)
 		between_waves = true
-		wave_timer    = 3.0
+		wave_timer    = 4.0
+
+func _on_enemy_kill_gold() -> void:
+	if player and player.has_method("get") and "gold" in player:
+		total_gold = player.gold
+		if hud:
+			hud.update_gold(total_gold)
 
 func _on_player_died() -> void:
 	emit_signal("game_over")
-	await get_tree().create_timer(2.0).timeout
+	if hud:
+		hud.show_message("HAS MUERTO", Color.RED)
+	await get_tree().create_timer(2.5).timeout
 	get_tree().reload_current_scene()
+
+func _victory() -> void:
+	emit_signal("victory")
+	if hud:
+		hud.show_message("VICTORIA!", Color.GOLD)

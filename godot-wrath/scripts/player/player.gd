@@ -47,7 +47,7 @@ signal enemy_killed
 # ── Nodes ──────────────────────────────────────────────────────────────────
 @onready var camera_arm   : SpringArm3D  = $CameraArm
 @onready var camera       : Camera3D     = $CameraArm/Camera3D
-@onready var mesh         : MeshInstance3D = $Mesh
+@onready var mesh         : MeshInstance3D = $Body
 @onready var hit_area     : Area3D       = $HitArea
 @onready var anim         : AnimationPlayer = $AnimationPlayer if has_node("AnimationPlayer") else null
 

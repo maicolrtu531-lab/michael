@@ -1,19 +1,47 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
-radius = 0.4
-height = 1.8
+radius = 0.35
+height = 1.7
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_1"]
-radius = 0.4
-height = 1.8
+[sub_resource type="CapsuleMesh" id="Body_mesh"]
+radius = 0.28
+height = 0.9
 
-[sub_resource type="StandardMaterial3D" id="Material_player"]
-albedo_color = Color(0.7, 0.3, 0.15, 1)
+[sub_resource type="StandardMaterial3D" id="Mat_body"]
+albedo_color = Color(0.55, 0.25, 0.1, 1)
 
-[sub_resource type="SphereShape3D" id="SphereShape3D_hit"]
+[sub_resource type="SphereMesh" id="Head_mesh"]
+radius = 0.22
+height = 0.44
+
+[sub_resource type="StandardMaterial3D" id="Mat_skin"]
+albedo_color = Color(0.85, 0.65, 0.45, 1)
+
+[sub_resource type="BoxMesh" id="Sword_mesh"]
+size = Vector3(0.07, 0.9, 0.07)
+
+[sub_resource type="StandardMaterial3D" id="Mat_sword"]
+albedo_color = Color(0.75, 0.8, 0.85, 1)
+metallic = 0.9
+roughness = 0.15
+
+[sub_resource type="BoxMesh" id="Shield_mesh"]
+size = Vector3(0.55, 0.65, 0.07)
+
+[sub_resource type="StandardMaterial3D" id="Mat_shield"]
+albedo_color = Color(0.3, 0.2, 0.1, 1)
+metallic = 0.4
+
+[sub_resource type="BoxMesh" id="Cape_mesh"]
+size = Vector3(0.5, 0.7, 0.04)
+
+[sub_resource type="StandardMaterial3D" id="Mat_cape"]
+albedo_color = Color(0.6, 0.05, 0.05, 1)
+
+[sub_resource type="SphereShape3D" id="HitShape_1"]
 radius = 2.0
 
 [node name="Player" type="CharacterBody3D"]
@@ -21,24 +49,44 @@ script = ExtResource("1")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("CapsuleShape3D_1")
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
 
-[node name="Mesh" type="MeshInstance3D" parent="."]
-mesh = SubResource("CapsuleMesh_1")
-surface_material_override/0 = SubResource("Material_player")
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+[node name="Body" type="MeshInstance3D" parent="."]
+mesh = SubResource("Body_mesh")
+surface_material_override/0 = SubResource("Mat_body")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+
+[node name="Head" type="MeshInstance3D" parent="."]
+mesh = SubResource("Head_mesh")
+surface_material_override/0 = SubResource("Mat_skin")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0)
+
+[node name="Sword" type="MeshInstance3D" parent="."]
+mesh = SubResource("Sword_mesh")
+surface_material_override/0 = SubResource("Mat_sword")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0.9, 0.1)
+
+[node name="Shield" type="MeshInstance3D" parent="."]
+mesh = SubResource("Shield_mesh")
+surface_material_override/0 = SubResource("Mat_shield")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 0.85, 0.15)
+
+[node name="Cape" type="MeshInstance3D" parent="."]
+mesh = SubResource("Cape_mesh")
+surface_material_override/0 = SubResource("Mat_cape")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, -0.28)
 
 [node name="CameraArm" type="SpringArm3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
-spring_length = 5.0
+spring_length = 6.0
 
 [node name="Camera3D" type="Camera3D" parent="CameraArm"]
 transform = Transform3D(1, 0, 0, 0, 0.94, 0.342, 0, -0.342, 0.94, 0, 0, 0)
 
 [node name="HitArea" type="Area3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0.5)
 collision_layer = 4
 collision_mask = 2
 
 [node name="HitCollision" type="CollisionShape3D" parent="HitArea"]
-shape = SubResource("SphereShape3D_hit")
+shape = SubResource("HitShape_1")
