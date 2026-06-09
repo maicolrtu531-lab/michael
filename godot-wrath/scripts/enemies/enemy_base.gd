@@ -24,12 +24,18 @@ signal died(enemy)
 
 @onready var mesh : MeshInstance3D = $Mesh
 
+# UI nodes created at runtime
+var name_label  : Label3D        = null
+var hp_bar_bg   : MeshInstance3D = null
+var hp_bar_fg   : MeshInstance3D = null
+var hp_bar_mat  : StandardMaterial3D = null
+
 func _ready() -> void:
 	hp = max_hp
 	add_to_group("enemy")
-	# Find player after scene is ready
 	call_deferred("_find_player")
 	_on_ready_extra()
+	call_deferred("_build_overhead_ui")
 
 func _find_player() -> void:
 	player = get_tree().get_first_node_in_group("player")
@@ -37,28 +43,82 @@ func _find_player() -> void:
 func _on_ready_extra() -> void:
 	pass
 
+func _build_overhead_ui() -> void:
+	var bar_height = _get_bar_height()
+
+	# Name label
+	name_label = Label3D.new()
+	name_label.text       = enemy_name
+	name_label.font_size  = 28
+	name_label.modulate   = Color(1.0, 0.9, 0.2, 1)
+	name_label.outline_size = 6
+	name_label.outline_modulate = Color(0, 0, 0, 1)
+	name_label.billboard  = BaseMaterial3D.BILLBOARD_ENABLED
+	name_label.no_depth_test = true
+	name_label.position   = Vector3(0, bar_height + 0.35, 0)
+	add_child(name_label)
+
+	# HP bar background (gray)
+	hp_bar_bg = MeshInstance3D.new()
+	var bg_mesh    = BoxMesh.new()
+	bg_mesh.size   = Vector3(1.1, 0.14, 0.02)
+	hp_bar_bg.mesh = bg_mesh
+	var bg_mat           = StandardMaterial3D.new()
+	bg_mat.albedo_color  = Color(0.15, 0.15, 0.15, 1)
+	bg_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	bg_mat.no_depth_test = true
+	hp_bar_bg.set_surface_override_material(0, bg_mat)
+	hp_bar_bg.position = Vector3(0, bar_height, 0)
+	add_child(hp_bar_bg)
+
+	# HP bar foreground (red/green)
+	hp_bar_fg = MeshInstance3D.new()
+	var fg_mesh    = BoxMesh.new()
+	fg_mesh.size   = Vector3(1.0, 0.10, 0.03)
+	hp_bar_fg.mesh = fg_mesh
+	hp_bar_mat           = StandardMaterial3D.new()
+	hp_bar_mat.albedo_color  = Color(0.0, 0.85, 0.1, 1)
+	hp_bar_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	hp_bar_mat.no_depth_test = true
+	hp_bar_mat.emission_enabled = true
+	hp_bar_mat.emission = Color(0.0, 0.5, 0.05, 1)
+	hp_bar_mat.emission_energy_multiplier = 0.5
+	hp_bar_fg.set_surface_override_material(0, hp_bar_mat)
+	hp_bar_fg.position = Vector3(0, bar_height, 0.01)
+	add_child(hp_bar_fg)
+
+func _get_bar_height() -> float:
+	return 2.0
+
+func _update_hp_bar() -> void:
+	if not hp_bar_fg or not hp_bar_mat:
+		return
+	var ratio = clamp(float(hp) / float(max_hp), 0.0, 1.0)
+	hp_bar_fg.scale.x = ratio
+	hp_bar_fg.position.x = (ratio - 1.0) * 0.5  # anchor left
+	var col = Color(1.0 - ratio, ratio * 0.85, 0.05, 1)
+	hp_bar_mat.albedo_color = col
+	hp_bar_mat.emission     = col * 0.5
+
 func _physics_process(delta: float) -> void:
 	if is_dead:
 		return
 
-	# Gravity
 	if not is_on_floor():
 		gravity_vel -= 20.0 * delta
 	else:
 		gravity_vel = -2.0
 	velocity.y = gravity_vel
 
-	# Frozen
 	if frozen_timer > 0:
 		frozen_timer -= delta
 		move_and_slide()
+		_update_hp_bar()
 		return
 
-	# Cooldowns
 	if attack_cd > 0:
 		attack_cd -= delta
 
-	# Knockback
 	if knockback.length() > 0.5:
 		velocity.x = knockback.x
 		velocity.z = knockback.z
@@ -88,11 +148,9 @@ func _physics_process(delta: float) -> void:
 				state = State.IDLE
 
 		State.ATTACK:
-			# Stop and face player
 			velocity.x = lerp(velocity.x, 0.0, 12.0 * delta)
 			velocity.z = lerp(velocity.z, 0.0, 12.0 * delta)
 			_face_player(delta)
-
 			if dist > attack_range + 0.5:
 				state = State.CHASE
 			elif attack_cd <= 0:
@@ -102,14 +160,14 @@ func _physics_process(delta: float) -> void:
 				_flash(Color(1.0, 0.3, 0.0, 1))
 
 	move_and_slide()
+	_update_hp_bar()
 
 func _move_toward_player(delta: float, dist: float) -> void:
 	var dir = (player.global_position - global_position)
 	dir.y = 0
 	dir = dir.normalized()
-	var spd = _get_speed(delta, dist)
-	velocity.x = dir.x * spd
-	velocity.z = dir.z * spd
+	velocity.x = dir.x * _get_speed(delta, dist)
+	velocity.z = dir.z * _get_speed(delta, dist)
 	_face_player(delta)
 
 func _get_speed(_delta: float, _dist: float) -> float:
@@ -153,6 +211,9 @@ func _die() -> void:
 	is_dead = true
 	state   = State.DEAD
 	velocity = Vector3.ZERO
+	if name_label:  name_label.visible  = false
+	if hp_bar_bg:   hp_bar_bg.visible   = false
+	if hp_bar_fg:   hp_bar_fg.visible   = false
 	emit_signal("died", self)
 	if player and player.has_method("on_enemy_killed"):
 		player.on_enemy_killed(exp_reward, gold_reward)
@@ -161,6 +222,3 @@ func _die() -> void:
 
 func _get_color() -> Color:
 	return Color(0.7, 0.2, 0.8, 1)
-
-func _update_timers(_delta: float) -> void:
-	pass

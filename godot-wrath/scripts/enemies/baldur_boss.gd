@@ -7,7 +7,7 @@ var charge_vel  : Vector3 = Vector3.ZERO
 var slam_cd     : float = 0.0
 
 func _on_ready_extra() -> void:
-	enemy_name   = "Baldur"
+	enemy_name   = "⚡ BALDUR ⚡"
 	max_hp       = 800
 	hp           = max_hp
 	move_speed   = 4.0
@@ -16,6 +16,9 @@ func _on_ready_extra() -> void:
 	detect_range = 30.0
 	exp_reward   = 500
 	gold_reward  = 100
+
+func _get_bar_height() -> float:
+	return 3.0
 
 func _get_color() -> Color:
 	return Color(0.86, 0.71, 1.0, 1) if phase == 1 else Color(1.0, 0.31, 0.12, 1)
