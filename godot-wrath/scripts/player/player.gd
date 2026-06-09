@@ -31,7 +31,8 @@ var invincible     : float = 0.0
 var rage_active    : float = 0.0
 var rage_cd        : float = 0.0
 var axe_cd         : float = 0.0
-var mana_regen     : float = 2.0  # per second
+var blizzard_cd    : float = 0.0
+var mana_regen     : float = 3.0
 
 # ── Lock-on ────────────────────────────────────────────────────────────────
 var locked_target  : Node3D = null
@@ -143,6 +144,12 @@ func _handle_combat(_delta: float) -> void:
 	elif Input.is_action_just_pressed("use_potion"):
 		use_potion()
 
+	# Hechizos con teclado
+	if Input.is_action_just_pressed("ui_accept") or Input.is_key_pressed(KEY_R):
+		_blizzard()
+	if Input.is_key_pressed(KEY_Q):
+		spartan_rage()
+
 func _melee_attack(heavy: bool) -> void:
 	if combo_timer > 0:
 		combo_count = (combo_count + 1) % 3
@@ -193,6 +200,7 @@ func _handle_timers(delta: float) -> void:
 	if rage_active  > 0: rage_active  -= delta
 	if rage_cd      > 0: rage_cd      -= delta
 	if axe_cd       > 0: axe_cd       -= delta
+	if blizzard_cd  > 0: blizzard_cd  -= delta
 	if dodge_timer  > 0:
 		dodge_timer -= delta
 		if dodge_timer <= 0:
@@ -285,6 +293,22 @@ func on_enemy_killed(exp_reward: int, gold_reward: int, mana_reward: float = 8.0
 	emit_signal("enemy_killed")
 
 # ── Spartan Rage ──────────────────────────────────────────────────────────
+func _blizzard() -> void:
+	if blizzard_cd > 0 or mana < 25:
+		return
+	blizzard_cd = 4.0
+	mana -= 25
+	emit_signal("mana_changed", int(mana), max_mana)
+	# Daño en área a todos los enemigos cercanos
+	var enemies = get_tree().get_nodes_in_group("enemy")
+	for e in enemies:
+		var d = global_position.distance_to(e.global_position)
+		if d < 8.0 and e.has_method("take_damage"):
+			var kb = (e.global_position - global_position).normalized() * 5.0
+			e.take_damage(int(base_damage * 1.5), kb)
+		if e.has_method("freeze"):
+			e.freeze(1.5)
+
 func spartan_rage() -> bool:
 	if rage_cd > 0 or mana < 30:
 		return false

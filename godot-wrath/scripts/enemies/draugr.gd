@@ -10,4 +10,4 @@ func _on_ready_extra() -> void:
 	gold_reward = randi_range(3, 10)
 
 func _get_color() -> Color:
-	return Color(0.55, 0.23, 0.78)
+	return Color(0.55, 0.23, 0.78, 1)
