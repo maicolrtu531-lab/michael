@@ -1,0 +1,22 @@
+# Window
+SCREEN_WIDTH = 1280
+SCREEN_HEIGHT = 720
+TITLE = "Mi Videojuego"
+FPS = 60
+
+# Colors
+BLACK  = (0, 0, 0)
+WHITE  = (255, 255, 255)
+RED    = (220, 50, 50)
+GREEN  = (50, 200, 50)
+BLUE   = (50, 100, 220)
+YELLOW = (255, 220, 0)
+GRAY   = (80, 80, 80)
+
+# Player
+PLAYER_SPEED = 4
+PLAYER_HP    = 100
+PLAYER_MANA  = 50
+
+# World
+TILE_SIZE = 64
