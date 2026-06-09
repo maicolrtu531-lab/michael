@@ -16,13 +16,19 @@ func _ready() -> void:
 	_build_ui()
 
 func _build_ui() -> void:
+	# Bottom-left panel: HP and Mana
 	var panel = PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	panel.position = Vector2(10, -130)
+	panel.anchor_left   = 0.0
+	panel.anchor_right  = 0.0
+	panel.anchor_top    = 1.0
+	panel.anchor_bottom = 1.0
+	panel.offset_left   = 10
+	panel.offset_top    = -130
+	panel.offset_right  = 250
+	panel.offset_bottom = -10
 	add_child(panel)
 
 	var vbox = VBoxContainer.new()
-	vbox.custom_minimum_size = Vector2(230, 0)
 	panel.add_child(vbox)
 
 	hp_label = Label.new()
@@ -30,9 +36,9 @@ func _build_ui() -> void:
 	vbox.add_child(hp_label)
 
 	hp_bar = ProgressBar.new()
-	hp_bar.custom_minimum_size = Vector2(210, 18)
-	hp_bar.max_value = 150
-	hp_bar.value = 150
+	hp_bar.custom_minimum_size = Vector2(220, 18)
+	hp_bar.max_value  = 150
+	hp_bar.value      = 150
 	hp_bar.show_percentage = false
 	var hp_style = StyleBoxFlat.new()
 	hp_style.bg_color = Color(0.8, 0.1, 0.1, 1)
@@ -44,55 +50,82 @@ func _build_ui() -> void:
 	vbox.add_child(mana_label)
 
 	mana_bar = ProgressBar.new()
-	mana_bar.custom_minimum_size = Vector2(210, 18)
-	mana_bar.max_value = 80
-	mana_bar.value = 80
+	mana_bar.custom_minimum_size = Vector2(220, 18)
+	mana_bar.max_value  = 80
+	mana_bar.value      = 80
 	mana_bar.show_percentage = false
 	var mana_style = StyleBoxFlat.new()
 	mana_style.bg_color = Color(0.1, 0.3, 0.9, 1)
 	mana_bar.add_theme_stylebox_override("fill", mana_style)
 	vbox.add_child(mana_bar)
 
-	var top_right = PanelContainer.new()
-	top_right.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	top_right.position = Vector2(-220, 10)
-	add_child(top_right)
+	# Top-right panel: stats
+	var rpanel = PanelContainer.new()
+	rpanel.anchor_left   = 1.0
+	rpanel.anchor_right  = 1.0
+	rpanel.anchor_top    = 0.0
+	rpanel.anchor_bottom = 0.0
+	rpanel.offset_left   = -220
+	rpanel.offset_top    = 10
+	rpanel.offset_right  = -10
+	rpanel.offset_bottom = 100
+	add_child(rpanel)
 
-	var tvbox = VBoxContainer.new()
-	tvbox.custom_minimum_size = Vector2(200, 0)
-	top_right.add_child(tvbox)
+	var rvbox = VBoxContainer.new()
+	rpanel.add_child(rvbox)
 
 	level_label = Label.new()
 	level_label.text = "Level 1"
-	tvbox.add_child(level_label)
+	rvbox.add_child(level_label)
 
 	gold_label = Label.new()
 	gold_label.text = "Gold: 0"
-	tvbox.add_child(gold_label)
+	rvbox.add_child(gold_label)
 
 	kills_label = Label.new()
 	kills_label.text = "Kills: 0"
-	tvbox.add_child(kills_label)
+	rvbox.add_child(kills_label)
 
+	# Top-center: wave name
 	wave_label = Label.new()
-	wave_label.text = "Wave 1"
-	wave_label.set_anchors_preset(Control.PRESET_TOP_CENTER)
-	wave_label.position = Vector2(-50, 10)
+	wave_label.text = "Oleada 1"
+	wave_label.anchor_left   = 0.5
+	wave_label.anchor_right  = 0.5
+	wave_label.anchor_top    = 0.0
+	wave_label.anchor_bottom = 0.0
+	wave_label.offset_left   = -80
+	wave_label.offset_top    = 10
+	wave_label.offset_right  = 80
+	wave_label.offset_bottom = 40
 	wave_label.add_theme_font_size_override("font_size", 24)
 	add_child(wave_label)
 
+	# Bottom-center: hint
 	var hint = Label.new()
-	hint.text = "[LMB] Ataque  [RMB] Pesado  [E] Hacha  [SPACE] Esquivar  [F] Poción  [T] Lock"
-	hint.set_anchors_preset(Control.PRESET_BOTTOM_CENTER)
-	hint.position = Vector2(-300, -20)
+	hint.text = "LMB Ataque | RMB Pesado | E Hacha | SPACE Esquivar | F Poción | T Lock"
+	hint.anchor_left   = 0.5
+	hint.anchor_right  = 0.5
+	hint.anchor_top    = 1.0
+	hint.anchor_bottom = 1.0
+	hint.offset_left   = -320
+	hint.offset_top    = -25
+	hint.offset_right  = 320
+	hint.offset_bottom = -5
 	hint.add_theme_font_size_override("font_size", 11)
 	add_child(hint)
 
+	# Center: big message
 	msg_label = Label.new()
 	msg_label.text = ""
-	msg_label.set_anchors_preset(Control.PRESET_CENTER)
-	msg_label.position = Vector2(-100, -20)
-	msg_label.add_theme_font_size_override("font_size", 28)
+	msg_label.anchor_left   = 0.5
+	msg_label.anchor_right  = 0.5
+	msg_label.anchor_top    = 0.5
+	msg_label.anchor_bottom = 0.5
+	msg_label.offset_left   = -150
+	msg_label.offset_top    = -20
+	msg_label.offset_right  = 150
+	msg_label.offset_bottom = 20
+	msg_label.add_theme_font_size_override("font_size", 32)
 	add_child(msg_label)
 
 func _process(delta: float) -> void:
@@ -139,7 +172,7 @@ func show_message(text: String, color: Color = Color.WHITE) -> void:
 	msg_timer = 2.5
 
 func update_wave(wave_num: int) -> void:
-	wave_label.text = "Wave %d" % wave_num
+	wave_label.text = "Oleada %d" % wave_num
 
 func update_gold(amount: int) -> void:
 	gold_label.text = "Gold: %d" % amount
