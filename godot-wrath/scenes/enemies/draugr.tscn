@@ -11,7 +11,7 @@ radius = 0.4
 height = 1.8
 
 [sub_resource type="StandardMaterial3D" id="Material_draugr"]
-albedo_color = Color(0.55, 0.23, 0.78)
+albedo_color = Color(0.55, 0.23, 0.78, 1)
 
 [node name="Draugr" type="CharacterBody3D"]
 script = ExtResource("1")

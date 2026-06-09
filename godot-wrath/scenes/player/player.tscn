@@ -11,13 +11,12 @@ radius = 0.4
 height = 1.8
 
 [sub_resource type="StandardMaterial3D" id="Material_player"]
-albedo_color = Color(0.7, 0.3, 0.15)
+albedo_color = Color(0.7, 0.3, 0.15, 1)
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_hit"]
 radius = 2.0
 
 [node name="Player" type="CharacterBody3D"]
-groups=["player"]
 script = ExtResource("1")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
