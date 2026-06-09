@@ -6,8 +6,10 @@ class HUD:
         self.font      = pygame.font.SysFont("Arial", 17)
         self.font_big  = pygame.font.SysFont("Arial", 20, bold=True)
         self.font_sm   = pygame.font.SysFont("Arial", 14)
+        self._blink_t  = 0
 
     def draw(self, surface, player, boss=None):
+        self._blink_t += 1
         self._panel(surface, player)
         self._abilities(surface, player)
         self._minimap_hint(surface, player)
@@ -17,6 +19,8 @@ class HUD:
             self._level_up(surface, player)
         if player.rage_active > 0:
             self._rage_overlay(surface)
+        if player.stat_points > 0:
+            self._stat_points_hint(surface, player)
 
     # ── Bottom-left stat panel ─────────────────────────────────────────────
     def _panel(self, surface, p):
@@ -98,3 +102,9 @@ class HUD:
 
     def _minimap_hint(self, surface, p):
         pass
+
+    def _stat_points_hint(self, surface, player):
+        # Blink every 40 frames
+        if (self._blink_t // 40) % 2 == 0:
+            msg = self.font_big.render(f"M — {player.stat_points} puntos disponibles", True, GOLD)
+            surface.blit(msg, (SCREEN_WIDTH // 2 - msg.get_width() // 2, SCREEN_HEIGHT - 145))

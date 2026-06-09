@@ -45,6 +45,24 @@ class Player(pygame.sprite.Sprite):
         self.potions         = 3
         self.inventory       = []
 
+        # Stat points system
+        self.stat_points     = 0
+        self.stats = {
+            "Fuerza":       1,  # increases damage
+            "Vitalidad":    1,  # increases max_hp
+            "Agilidad":     1,  # increases speed
+            "Inteligencia": 1,  # increases max_mana
+        }
+
+        # Unlocked abilities
+        self.has_odin_ray    = False
+        self.has_divine_shield = False
+        self.has_thunder_storm = False
+        self.odin_ray_cd     = 0
+        self.divine_shield_cd = 0
+        self.divine_shield_active = 0
+        self.thunder_storm_cd = 0
+
         # Visual feedback
         self.hit_flash       = 0
         self.level_up_flash  = 0
@@ -96,16 +114,23 @@ class Player(pygame.sprite.Sprite):
         # Timers
         if self.attack_timer > 0:     self.attack_timer -= 1
         if self.attack_cooldown > 0:  self.attack_cooldown -= 1
-        if self.invincible > 0:       self.invincible -= 1
+        if self.invincible > 0 and self.divine_shield_active == 0:
+            self.invincible -= 1
+        elif self.divine_shield_active > 0:
+            self.invincible = 1  # stay invincible while shield is active
         if self.combo_timer > 0:      self.combo_timer -= 1
         else:                         self.combo_count = 0
-        if self.axe_throw_cd > 0:     self.axe_throw_cd -= 1
-        if self.rage_cd > 0:          self.rage_cd -= 1
-        if self.rage_active > 0:      self.rage_active -= 1
-        if self.blizzard_cd > 0:      self.blizzard_cd -= 1
-        if self.hit_flash > 0:        self.hit_flash -= 1
-        if self.level_up_flash > 0:   self.level_up_flash -= 1
-        if self.mana < self.max_mana: self.mana = min(self.max_mana, self.mana + 0.02)
+        if self.axe_throw_cd > 0:          self.axe_throw_cd -= 1
+        if self.rage_cd > 0:               self.rage_cd -= 1
+        if self.rage_active > 0:           self.rage_active -= 1
+        if self.blizzard_cd > 0:           self.blizzard_cd -= 1
+        if self.odin_ray_cd > 0:           self.odin_ray_cd -= 1
+        if self.divine_shield_cd > 0:      self.divine_shield_cd -= 1
+        if self.divine_shield_active > 0:  self.divine_shield_active -= 1
+        if self.thunder_storm_cd > 0:      self.thunder_storm_cd -= 1
+        if self.hit_flash > 0:             self.hit_flash -= 1
+        if self.level_up_flash > 0:        self.level_up_flash -= 1
+        if self.mana < self.max_mana:      self.mana = min(self.max_mana, self.mana + 0.02)
 
     def melee_attack(self):
         if self.attack_cooldown > 0:
@@ -156,7 +181,7 @@ class Player(pygame.sprite.Sprite):
 
     def gain_exp(self, amount):
         self.exp += amount
-        needed = self.level * 120
+        needed = self.exp_needed
         if self.exp >= needed:
             self.exp -= needed
             self.level += 1
@@ -165,7 +190,32 @@ class Player(pygame.sprite.Sprite):
             self.max_mana += 10
             self.damage   += 5
             self.defense  += 1
+            self.stat_points += 3
             self.level_up_flash = 60
+
+    def odin_ray(self):
+        if not self.has_odin_ray or self.odin_ray_cd > 0 or self.mana < 20:
+            return None
+        self.odin_ray_cd = 120
+        self.mana -= 20
+        return {"type": "odin_ray", "x": self.rect.centerx, "y": self.rect.centery,
+                "dx": self.facing.x, "dy": self.facing.y, "damage": int(self.damage * 3)}
+
+    def divine_shield(self):
+        if not self.has_divine_shield or self.divine_shield_cd > 0 or self.mana < 25:
+            return False
+        self.divine_shield_cd = 600
+        self.divine_shield_active = 300  # 5 seconds at 60fps
+        self.mana -= 25
+        return True
+
+    def thunder_storm(self):
+        if not self.has_thunder_storm or self.thunder_storm_cd > 0 or self.mana < 30:
+            return None
+        self.thunder_storm_cd = 360
+        self.mana -= 30
+        return {"type": "thunder_storm", "x": self.rect.centerx, "y": self.rect.centery,
+                "radius": 250, "damage": int(self.damage * 1.5)}
 
     def draw(self, surface, camera):
         if self.hit_flash % 4 < 2 and self.hit_flash > 0:
@@ -177,6 +227,14 @@ class Player(pygame.sprite.Sprite):
             aura = pygame.Surface((60, 60), pygame.SRCALPHA)
             pygame.draw.circle(aura, (255, 80, 0, 80), (30, 30), 30)
             surface.blit(aura, (pos.x - 8, pos.y - 8))
+
+        # Divine shield aura
+        if self.divine_shield_active > 0:
+            shield_surf = pygame.Surface((80, 80), pygame.SRCALPHA)
+            alpha = 140 if (self.divine_shield_active // 10) % 2 == 0 else 80
+            pygame.draw.circle(shield_surf, (100, 200, 255, alpha), (40, 40), 38)
+            pygame.draw.circle(shield_surf, (200, 240, 255, 200), (40, 40), 38, 3)
+            surface.blit(shield_surf, (pos.x - 18, pos.y - 18))
 
         surface.blit(self.image, pos)
 
@@ -191,4 +249,4 @@ class Player(pygame.sprite.Sprite):
 
     @property
     def exp_needed(self):
-        return self.level * 120
+        return self.level * 120 + (self.level ** 2) * 20
