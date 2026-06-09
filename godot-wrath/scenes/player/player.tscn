@@ -85,8 +85,9 @@ transform = Transform3D(1, 0, 0, 0, 0.94, 0.342, 0, -0.342, 0.94, 0, 0, 0)
 
 [node name="HitArea" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0.5)
-collision_layer = 4
-collision_mask = 2
+collision_layer = 0
+collision_mask = 1
+monitoring = true
 
 [node name="HitCollision" type="CollisionShape3D" parent="HitArea"]
 shape = SubResource("HitShape_1")

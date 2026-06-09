@@ -114,7 +114,10 @@ func _handle_movement(delta: float) -> void:
 			target_rot = move_dir
 		if target_rot.length() > 0.1:
 			var angle = atan2(target_rot.x, target_rot.z)
+			var old_y = rotation.y
 			rotation.y = lerp_angle(rotation.y, angle, 12.0 * delta)
+			# Keep camera in world-space direction when player rotates
+			camera_arm.rotation.y -= (rotation.y - old_y)
 	else:
 		velocity.x = lerp(velocity.x, 0.0, 12.0 * delta)
 		velocity.z = lerp(velocity.z, 0.0, 12.0 * delta)
@@ -144,10 +147,10 @@ func _handle_combat(_delta: float) -> void:
 	elif Input.is_action_just_pressed("use_potion"):
 		use_potion()
 
-	# Hechizos con teclado
-	if Input.is_action_just_pressed("ui_accept") or Input.is_key_pressed(KEY_R):
+	# Hechizos
+	if Input.is_action_just_pressed("blizzard"):
 		_blizzard()
-	if Input.is_key_pressed(KEY_Q):
+	if Input.is_action_just_pressed("spartan_rage"):
 		spartan_rage()
 
 func _melee_attack(heavy: bool) -> void:
