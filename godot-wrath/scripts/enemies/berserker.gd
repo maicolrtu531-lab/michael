@@ -13,5 +13,5 @@ func _on_ready_extra() -> void:
 func _get_color() -> Color:
 	return Color(1.0, 0.5, 0.0, 1)
 
-func _get_speed(delta: float, dist: float) -> float:
+func _get_speed(_delta: float, dist: float) -> float:
 	return move_speed * (2.0 if dist > 5.0 else 1.0)

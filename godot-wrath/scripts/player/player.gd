@@ -268,11 +268,11 @@ func use_potion() -> void:
 # ── EXP / Level ───────────────────────────────────────────────────────────
 func gain_exp(amount: int) -> void:
 	exp += amount
-	while exp >= exp_needed():
+	while exp >= _exp_needed():
 		exp -= exp_needed()
 		_level_up()
 
-func exp_needed() -> int:
+func _exp_needed() -> int:
 	return level * 120 + level * level * 20
 
 func _level_up() -> void:
