@@ -55,7 +55,7 @@ func _ready() -> void:
 	hp   = max_hp
 	mana = max_mana
 	add_to_group("player")
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	Input.mouse_mode = Input.MOUSE_MODE_CONFINED_HIDDEN
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and not locked_target:
@@ -89,9 +89,9 @@ func _apply_camera(delta: float) -> void:
 		to.y = 0
 		if to.length() > 0.1:
 			cam_yaw = lerp_angle(cam_yaw, atan2(to.x, to.z) + PI, 6.0 * delta)
-	# Apply world-space camera angles independently of player body rotation
-	camera_arm.global_rotation.y = cam_yaw
-	camera_arm.rotation.x        = cam_pitch
+	# Local rotation = world cam_yaw minus player body yaw → camera stays fixed in world space
+	camera_arm.rotation.y = cam_yaw - rotation.y
+	camera_arm.rotation.x = cam_pitch
 
 func _handle_movement(delta: float) -> void:
 	if is_dodging:
@@ -146,9 +146,12 @@ func _start_dodge(dir: Vector3) -> void:
 func _handle_combat() -> void:
 	if attack_cd > 0 or is_dodging:
 		return
-	if Input.is_action_just_pressed("attack_light"):
+	# Mouse OR keyboard attacks
+	var light = Input.is_action_just_pressed("attack_light") or Input.is_key_label_pressed(KEY_Z)
+	var heavy = Input.is_action_just_pressed("attack_heavy") or Input.is_key_label_pressed(KEY_X)
+	if light:
 		_melee_attack(false)
-	elif Input.is_action_just_pressed("attack_heavy"):
+	elif heavy:
 		_melee_attack(true)
 	elif Input.is_action_just_pressed("use_ability"):
 		_throw_axe()
