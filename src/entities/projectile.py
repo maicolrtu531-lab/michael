@@ -11,6 +11,15 @@ class AxeProjectile(pygame.sprite.Sprite):
         self.lifetime = 50
         self.angle   = 0
         self.hit_enemies = []
+        self._alive  = True
+
+    @property
+    def alive(self):
+        return self._alive
+
+    def kill(self):
+        self._alive = False
+        super().kill()
 
     def update(self, world_rect):
         self.rect.x += int(self.vel.x)
