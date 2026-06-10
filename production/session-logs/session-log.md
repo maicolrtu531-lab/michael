@@ -462,3 +462,19 @@ production/session-logs/session-log.md
 production/session-logs/session-log.md
 ---
 
+## Session End: 20260610_153406
+### Commits
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+---
+
+## Session End: 20260610_153453
+### Commits
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+### Uncommitted Changes
+production/session-logs/session-log.md
+---
+
