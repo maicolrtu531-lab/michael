@@ -1,10 +1,11 @@
 extends Node
 
-var current_wave  : int   = 0
-var enemies_alive : int   = 0
-var wave_timer    : float = 0.0
-var between_waves : bool  = false
-var total_gold    : int   = 0
+var current_wave   : int   = 0
+var current_world  : int   = 1
+var enemies_alive  : int   = 0
+var wave_timer     : float = 0.0
+var between_waves  : bool  = false
+var total_gold     : int   = 0
 
 var player         : Node3D = null
 var hud            : CanvasLayer = null
@@ -22,18 +23,22 @@ const DRAUGR    = preload("res://scenes/enemies/draugr.tscn")
 const BERSERKER = preload("res://scenes/enemies/berserker.tscn")
 const BALDUR    = preload("res://scenes/enemies/baldur_boss.tscn")
 
-var WAVES : Array = [
+# Base wave definitions — each world re-uses these with scaled stats
+const WAVE_TEMPLATES : Array = [
 	[{"type": "Draugr",    "count": 2}],
-	[{"type": "Draugr",    "count": 3}, {"type": "Draugr",    "count": 1}],
-	[{"type": "Draugr",    "count": 3}, {"type": "Berserker", "count": 3}],
-	[{"type": "Draugr",    "count": 4}, {"type": "Berserker", "count": 4}],
-	[{"type": "Berserker", "count": 4}, {"type": "Draugr",    "count": 6}],
-	[{"type": "Draugr",    "count": 5}, {"type": "Berserker", "count": 7}],
-	[{"type": "Berserker", "count": 6}, {"type": "Draugr",    "count": 8}],
-	[{"type": "Draugr",    "count": 7}, {"type": "Berserker", "count": 9}],
-	[{"type": "Berserker", "count": 8}, {"type": "Draugr",    "count": 10}],
-	[{"type": "Draugr",    "count": 6}, {"type": "Berserker", "count": 6}, {"type": "Baldur", "count": 1}],
+	[{"type": "Draugr",    "count": 4}],
+	[{"type": "Draugr",    "count": 3}, {"type": "Berserker", "count": 2}],
+	[{"type": "Draugr",    "count": 4}, {"type": "Berserker", "count": 3}],
+	[{"type": "Berserker", "count": 4}, {"type": "Draugr",    "count": 4}],
+	[{"type": "Draugr",    "count": 5}, {"type": "Berserker", "count": 5}],
+	[{"type": "Berserker", "count": 6}, {"type": "Draugr",    "count": 5}],
+	[{"type": "Draugr",    "count": 6}, {"type": "Berserker", "count": 6}],
+	[{"type": "Berserker", "count": 8}, {"type": "Draugr",    "count": 8}],
+	[{"type": "Draugr",    "count": 5}, {"type": "Berserker", "count": 5}, {"type": "Baldur", "count": 1}],
 ]
+
+func _world_multiplier() -> float:
+	return 1.0 + (current_world - 1) * 0.4
 
 func _ready() -> void:
 	player         = get_node_or_null("Player")
@@ -68,10 +73,20 @@ func _process(delta: float) -> void:
 		if wave_timer <= 0:
 			between_waves = false
 			current_wave += 1
-			if current_wave >= WAVES.size():
-				_victory()
+			if current_wave >= WAVE_TEMPLATES.size():
+				_next_world()
 			else:
 				_start_wave(current_wave)
+
+func _next_world() -> void:
+	current_world += 1
+	current_wave   = 0
+	var mult = _world_multiplier()
+	if hud:
+		hud.update_wave_label("MUNDO %d — Oleada 1" % current_world)
+		hud.show_message("MUNDO %d  (x%.1f)" % [current_world, mult], Color(1.0, 0.6, 0.0, 1))
+	await get_tree().create_timer(3.0).timeout
+	_start_wave(0)
 
 func _any_menu_open() -> bool:
 	var sm = stats_menu and stats_menu.visible_flag
@@ -112,19 +127,26 @@ func _input(event: InputEvent) -> void:
 				_update_mouse_mode()
 
 func _start_wave(wave_idx: int) -> void:
-	emit_signal("wave_started", wave_idx + 1)
+	var wave_num = wave_idx + 1
+	emit_signal("wave_started", wave_num)
 	if hud:
-		hud.update_wave(wave_idx + 1)
-		hud.show_message("OLEADA %d" % (wave_idx + 1), Color.ORANGE)
+		hud.update_wave_label("Mundo %d — Oleada %d" % [current_world, wave_num])
+		hud.show_message("OLEADA %d" % wave_num, Color.ORANGE)
 
-	var wave = WAVES[wave_idx]
+	var template = WAVE_TEMPLATES[wave_idx]
 	enemies_alive = 0
-	for group in wave:
+
+	for group in template:
 		for i in range(group["count"]):
 			var enemy = _spawn_enemy(group["type"])
 			if enemy:
 				enemies_alive += 1
 				enemy.died.connect(_on_enemy_died)
+
+	# Safety: if no enemies spawned, advance after a short delay
+	if enemies_alive == 0:
+		await get_tree().create_timer(1.0).timeout
+		_on_enemy_died(null)
 
 func _spawn_enemy(type: String) -> Node:
 	var scene : PackedScene = null
@@ -138,6 +160,17 @@ func _spawn_enemy(type: String) -> Node:
 	var enemy = scene.instantiate()
 	add_child(enemy)
 	enemy.global_position = _get_spawn_point()
+
+	# Apply world difficulty scaling
+	var mult = _world_multiplier()
+	if mult > 1.0:
+		enemy.max_hp      = int(enemy.max_hp      * mult)
+		enemy.hp          = enemy.max_hp
+		enemy.attack_dmg  = int(enemy.attack_dmg  * mult)
+		enemy.move_speed  = enemy.move_speed * min(mult * 0.5 + 0.5, 2.0)
+		enemy.exp_reward  = int(enemy.exp_reward   * mult)
+		enemy.gold_reward = int(enemy.gold_reward  * mult)
+
 	return enemy
 
 func _get_spawn_point() -> Vector3:
@@ -147,7 +180,7 @@ func _get_spawn_point() -> Vector3:
 			return pts[randi() % pts.size()].global_position + Vector3(0, 1, 0)
 	return Vector3(randf_range(-18, 18), 1, randf_range(-18, 18))
 
-func _on_enemy_died(_enemy: Node) -> void:
+func _on_enemy_died(_enemy) -> void:
 	enemies_alive -= 1
 	if enemies_alive <= 0:
 		emit_signal("wave_cleared", current_wave + 1)
@@ -157,7 +190,7 @@ func _on_enemy_died(_enemy: Node) -> void:
 		wave_timer    = 4.0
 
 func _on_enemy_kill_gold() -> void:
-	if player and player.has_method("get") and "gold" in player:
+	if player and "gold" in player:
 		total_gold = player.gold
 		if hud:
 			hud.update_gold(total_gold)

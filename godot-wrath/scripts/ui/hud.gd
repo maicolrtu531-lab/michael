@@ -111,9 +111,9 @@ func _build_ui() -> void:
 	wave_label.anchor_right  = 0.5
 	wave_label.anchor_top    = 0.0
 	wave_label.anchor_bottom = 0.0
-	wave_label.offset_left   = -80
+	wave_label.offset_left   = -160
 	wave_label.offset_top    = 10
-	wave_label.offset_right  = 80
+	wave_label.offset_right  = 160
 	wave_label.offset_bottom = 40
 	wave_label.add_theme_font_size_override("font_size", 24)
 	add_child(wave_label)
@@ -273,6 +273,9 @@ func show_message(text: String, color: Color = Color.WHITE) -> void:
 
 func update_wave(wave_num: int) -> void:
 	wave_label.text = "Oleada %d" % wave_num
+
+func update_wave_label(text: String) -> void:
+	wave_label.text = text
 
 func update_gold(amount: int) -> void:
 	gold_label.text = "Gold: %d" % amount
