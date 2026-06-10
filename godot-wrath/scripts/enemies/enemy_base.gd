@@ -231,15 +231,16 @@ func _die() -> void:
 	if _leg_le: _leg_le.visible = false
 	if _leg_re: _leg_re.visible = false
 
-	# Drop item
+	emit_signal("died", self)
+	if player and player.has_method("on_enemy_killed"):
+		player.on_enemy_killed(exp_reward, gold_reward)
+
+	# Drop item — after signal so a crash here never blocks wave progression
 	if player and is_instance_valid(player) and player.has_method("receive_item_drop"):
 		var drop_chance = 0.35 + player.luck * 0.05
 		if randf() < drop_chance:
 			_drop_item()
 
-	emit_signal("died", self)
-	if player and player.has_method("on_enemy_killed"):
-		player.on_enemy_killed(exp_reward, gold_reward)
 	await get_tree().create_timer(0.6).timeout
 	queue_free()
 
