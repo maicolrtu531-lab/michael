@@ -545,3 +545,18 @@ production/session-logs/agent-audit.log
 production/session-logs/session-log.md
 ---
 
+## Session End: 20260610_155318
+### Commits
+4a3fad5 chore: update session logs
+fc528e1 chore: update session logs
+06a7178 feat: add enemy HP bars (Label3D) and wired stats menu (TAB)
+f0f6400 chore: update session log
+8bffb9e chore: update session log
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+### Uncommitted Changes
+godot-wrath/scripts/player/player.gd
+godot-wrath/scripts/ui/hud.gd
+---
+
