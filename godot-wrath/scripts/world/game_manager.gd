@@ -2,10 +2,9 @@ extends Node
 
 var current_wave   : int   = 0
 var current_world  : int   = 1
-var enemies_alive  : int   = 0
 var wave_timer     : float = 0.0
-var wave_timeout   : float = 0.0
 var between_waves  : bool  = false
+var wave_active    : bool  = false
 var total_gold     : int   = 0
 
 var player         : Node3D = null
@@ -24,7 +23,6 @@ const DRAUGR    = preload("res://scenes/enemies/draugr.tscn")
 const BERSERKER = preload("res://scenes/enemies/berserker.tscn")
 const BALDUR    = preload("res://scenes/enemies/baldur_boss.tscn")
 
-# Base wave definitions — each world re-uses these with scaled stats
 const WAVE_TEMPLATES : Array = [
 	[{"type": "Draugr",    "count": 2}],
 	[{"type": "Draugr",    "count": 4}],
@@ -57,7 +55,6 @@ func _ready() -> void:
 
 	if hud and player:
 		hud.connect_player(player)
-
 	if stats_menu and player:
 		stats_menu.connect_player(player)
 	if shop_menu and player:
@@ -69,17 +66,19 @@ func _ready() -> void:
 	_start_wave(0)
 
 func _process(delta: float) -> void:
-	# Wave timeout: if enemies get stuck, force-advance after 90s
-	if not between_waves and enemies_alive > 0:
-		wave_timeout -= delta
-		if wave_timeout <= 0:
-			print("Wave timeout — forcing wave clear")
-			enemies_alive = 0
-			_on_enemy_died(null)
+	# Poll enemy group instead of relying on signals
+	if wave_active and not between_waves:
+		var alive = get_tree().get_nodes_in_group("enemy").size()
+		if alive == 0:
+			wave_active = false
+			emit_signal("wave_cleared", current_wave + 1)
+			if hud:
+				hud.show_message("OLEADA COMPLETADA!", Color.GREEN)
+			between_waves = true
+			wave_timer    = 3.0
 
 	if between_waves:
 		wave_timer -= delta
-		# Show countdown
 		if hud and wave_timer > 0:
 			var next = current_wave + 1
 			if next < WAVE_TEMPLATES.size():
@@ -152,25 +151,20 @@ func _start_wave(wave_idx: int) -> void:
 		hud.show_message("OLEADA %d" % wave_num, Color.ORANGE)
 
 	var template = WAVE_TEMPLATES[wave_idx]
-	enemies_alive = 0
-	wave_timeout  = 90.0
+	var spawned  = 0
 
 	for group in template:
 		for i in range(group["count"]):
 			var enemy = _spawn_enemy(group["type"])
 			if enemy:
-				enemies_alive += 1
-				enemy.died.connect(_on_enemy_died)
-				# Force enemy to find and chase player immediately
-				if player and is_instance_valid(player):
-					enemy.player = player
-					enemy.state  = 1  # State.CHASE
-	print("Wave %d started — enemies_alive: %d" % [wave_num, enemies_alive])
+				spawned += 1
 
-	# Safety: if no enemies spawned, advance after a short delay
-	if enemies_alive == 0:
+	wave_active = spawned > 0
+	# Safety fallback: if nothing spawned, advance after 1s
+	if not wave_active:
 		await get_tree().create_timer(1.0).timeout
-		_on_enemy_died(null)
+		between_waves = true
+		wave_timer    = 0.1
 
 func _spawn_enemy(type: String) -> Node:
 	var scene : PackedScene = null
@@ -184,6 +178,11 @@ func _spawn_enemy(type: String) -> Node:
 	var enemy = scene.instantiate()
 	add_child(enemy)
 	enemy.global_position = _get_spawn_point()
+
+	# Assign player and force chase immediately
+	if player and is_instance_valid(player):
+		enemy.player = player
+		enemy.state  = 1  # CHASE
 
 	# Apply world difficulty scaling
 	var mult = _world_multiplier()
@@ -203,15 +202,6 @@ func _get_spawn_point() -> Vector3:
 		if pts.size() > 0:
 			return pts[randi() % pts.size()].global_position + Vector3(0, 1, 0)
 	return Vector3(randf_range(-10, 10), 1, randf_range(-10, 10))
-
-func _on_enemy_died(_enemy) -> void:
-	enemies_alive -= 1
-	if enemies_alive <= 0:
-		emit_signal("wave_cleared", current_wave + 1)
-		if hud:
-			hud.show_message("OLEADA COMPLETADA!", Color.GREEN)
-		between_waves = true
-		wave_timer    = 3.0
 
 func _on_enemy_kill_gold() -> void:
 	if player and "gold" in player:
