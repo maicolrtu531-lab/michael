@@ -1,41 +1,40 @@
-# Wrath of the Gods — RPG de Acción
+# Claude Code Game Studios — Wrath of the Gods 3D
 
-Motor: Python 3 + Pygame  
-Inspirado en God of War. Estructura modular.
+## Studio Setup
+@.claude/docs/coordination-rules.md
+@.claude/docs/technical-preferences.md
+@.claude/docs/coding-standards.md
 
-## Estructura
-- `main.py` — punto de entrada
-- `src/settings.py` — constantes globales (colores, tamaños, escenas)
-- `src/game.py` — loop principal + gestor de escenas
-- `src/camera.py` — cámara scrolling
-- `src/world.py` — mapa procedural con tiles
-- `src/scenes/` — menu_scene, game_scene, gameover_scene
-- `src/entities/` — player, enemy (Draugr/Berserker/Revenant/Ancient/Baldur), projectile
-- `src/ui/` — hud, inventory (tienda)
+## Engine & Stack
+- **Engine**: Godot 4.6 (carpeta `godot-wrath/`)
+- **Language**: GDScript
+- **Branch**: `claude/festive-fermi-hwmzx0`
+
+---
+# Wrath of the Gods — RPG de Acción 3D
+
+Inspirado en God of War. Arena 3D con oleadas de enemigos.
 
 ## Controles
 | Tecla | Acción |
 |-------|--------|
-| WASD / Flechas | Mover |
-| ESPACIO | Ataque cuerpo a cuerpo (combo x3) |
-| E | Lanzar hacha (15 mana) |
-| R | Blizzard en área (25 mana) |
-| Q | Furia Espartana (30 mana, daño +50%) |
-| F / H | Usar poción |
-| I | Abrir tienda |
-| ESC | Salir |
+| WASD | Mover |
+| Ratón | Cámara |
+| LMB / Z | Ataque ligero (combo x3) |
+| RMB / X | Ataque pesado |
+| E | Hacha (15 MP) |
+| R | Blizzard AoE (25 MP) |
+| Q | Furia Espartana (30 MP) |
+| 1 | Rayo — enemigo frontal (20 MP) |
+| 2 | Escudo Divino 4s (20 MP) |
+| 3 | Terremoto onda expansiva (30 MP) |
+| SPACE | Esquivar |
+| F | Poción |
+| T | Lock target |
 
 ## Enemigos
 - **Draugr** — básico
-- **Berserker** — rápido y agresivo
-- **Revenant** — se teletransporta
-- **Ancient** — tanque lento con núcleo naranja
-- **Baldur** — BOSS con 2 fases y carga
-
-## Para correr
-```bash
-pip install pygame
-python main.py
-```
+- **Berserker** — rápido, agresivo
+- **Baldur** — BOSS con 2 fases
 
 ## Responde siempre de forma concisa y sin relleno.
