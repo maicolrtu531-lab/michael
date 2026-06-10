@@ -352,3 +352,62 @@ a1b9e7e Fix HUD: use anchor/offset instead of PRESET constants
 production/session-logs/session-log.md
 ---
 
+## Session End: 20260610_034750
+### Commits
+4349cad chore: update session log
+2ce9e10 fix: add node to scene tree before setting global_position (VFX spawners)
+591970a chore: spell-system GDD skeleton + session log
+bc60ebc chore: update session log
+bbf05cf docs: add game-concept.md, systems-index.md, and combat GDD
+41ab5ea chore: update session log
+462159d chore: update session log
+6033694 feat: configure engine via /setup-engine (Godot 4.6 + GDScript, PC target)
+a2a9c6b chore: update session log
+baccd6d chore: initialize studio stage and review mode
+7b11947 Install Claude Code Game Studios framework (49 agents, 72 commands)
+0739448 Add 3 new spells (Lightning, Divine Shield, Ground Slam) + VFX + spell HUD
+8534bfa Add animations (sword swing, body bob, death), arena walls, pillars, torches, stone textures
+60595dc Add health bars + names above enemies (Label3D + scaled mesh), distinct enemy models with heads/eyes/horns/crown
+4f3b303 Add procedural noise textures to ground, player armor, enemies; glow, metallic materials, better sky
+e513d52 Fix camera local rotation, add Z/X keyboard attacks, use CONFINED mouse mode
+7db3499 Complete rewrite: fix camera (world-space yaw), melee uses distance check, spells separate from attack_cd
+3377043 Fix warnings: rename exp_needed, prefix unused delta param
+8a2eda7 Fix camera rotation with WASD, fix HitArea collision mask, add R/Q spell inputs
+f4cf1f0 Fix: enemies now move/attack directly, add spells (R=Blizzard, Q=Spartan Rage), remove broken navigation
+a1b9e7e Fix HUD: use anchor/offset instead of PRESET constants
+3ef0cd5 Add full HUD, game manager with waves, improved player model with sword/shield/cape
+62e04bb Fix syntax error: inline else not allowed in GDScript
+88a5f99 Add Player instance to main.tscn so camera renders the game
+---
+
+## Session End: 20260610_035129
+### Commits
+dd527a8 fix: replace modulate tween with albedo_color:a on MeshInstance3D death animation
+4349cad chore: update session log
+2ce9e10 fix: add node to scene tree before setting global_position (VFX spawners)
+591970a chore: spell-system GDD skeleton + session log
+bc60ebc chore: update session log
+bbf05cf docs: add game-concept.md, systems-index.md, and combat GDD
+41ab5ea chore: update session log
+462159d chore: update session log
+6033694 feat: configure engine via /setup-engine (Godot 4.6 + GDScript, PC target)
+a2a9c6b chore: update session log
+baccd6d chore: initialize studio stage and review mode
+7b11947 Install Claude Code Game Studios framework (49 agents, 72 commands)
+0739448 Add 3 new spells (Lightning, Divine Shield, Ground Slam) + VFX + spell HUD
+8534bfa Add animations (sword swing, body bob, death), arena walls, pillars, torches, stone textures
+60595dc Add health bars + names above enemies (Label3D + scaled mesh), distinct enemy models with heads/eyes/horns/crown
+4f3b303 Add procedural noise textures to ground, player armor, enemies; glow, metallic materials, better sky
+e513d52 Fix camera local rotation, add Z/X keyboard attacks, use CONFINED mouse mode
+7db3499 Complete rewrite: fix camera (world-space yaw), melee uses distance check, spells separate from attack_cd
+3377043 Fix warnings: rename exp_needed, prefix unused delta param
+8a2eda7 Fix camera rotation with WASD, fix HitArea collision mask, add R/Q spell inputs
+f4cf1f0 Fix: enemies now move/attack directly, add spells (R=Blizzard, Q=Spartan Rage), remove broken navigation
+a1b9e7e Fix HUD: use anchor/offset instead of PRESET constants
+3ef0cd5 Add full HUD, game manager with waves, improved player model with sword/shield/cape
+62e04bb Fix syntax error: inline else not allowed in GDScript
+88a5f99 Add Player instance to main.tscn so camera renders the game
+### Uncommitted Changes
+production/session-logs/session-log.md
+---
+
