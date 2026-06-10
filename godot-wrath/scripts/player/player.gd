@@ -17,6 +17,9 @@ var kills       : int   = 0
 var potions     : int   = 3
 var stat_points : int   = 0
 
+var owned_abilities : Array = ["axe", "blizzard"]
+var active_slots    : Array = ["axe", "blizzard", "", "", "", ""]
+
 var combo_count  : int   = 0
 var combo_timer  : float = 0.0
 var attack_cd    : float = 0.0
@@ -33,6 +36,9 @@ var lightning_cd : float = 0.0
 var shield_cd    : float = 0.0
 var shield_active: float = 0.0
 var slam_cd      : float = 0.0
+var meteor_cd    : float = 0.0
+var heal_cd      : float = 0.0
+var howl_cd      : float = 0.0
 var mana_regen   : float = 3.0
 
 # Camera stored as world-space angles so player body rotation doesn't affect it
@@ -198,21 +204,48 @@ func _handle_combat() -> void:
 	elif heavy:
 		_melee_attack(true)
 	elif Input.is_action_just_pressed("use_ability"):
-		_throw_axe()
+		_cast_slot(0)
 	elif Input.is_action_just_pressed("use_potion"):
 		use_potion()
 
 func _handle_spells() -> void:
 	if Input.is_action_just_pressed("blizzard"):
-		_blizzard()
+		_cast_slot(1)
 	if Input.is_action_just_pressed("spartan_rage"):
-		_spartan_rage()
+		_cast_slot(2)
 	if Input.is_key_label_pressed(KEY_1):
-		_lightning_strike()
+		_cast_slot(3)
 	if Input.is_key_label_pressed(KEY_2):
-		_divine_shield()
+		_cast_slot(4)
 	if Input.is_key_label_pressed(KEY_3):
-		_ground_slam()
+		_cast_slot(5)
+
+func _cast_slot(idx: int) -> void:
+	if idx >= active_slots.size():
+		return
+	match active_slots[idx]:
+		"axe":       _throw_axe()
+		"blizzard":  _blizzard()
+		"rage":      _spartan_rage()
+		"lightning": _lightning_strike()
+		"shield":    _divine_shield()
+		"slam":      _ground_slam()
+		"meteor":    _meteor()
+		"heal":      _heal_spell()
+		"howl":      _berserker_howl()
+
+func get_ability_cd(key: String) -> float:
+	match key:
+		"axe":       return axe_cd
+		"blizzard":  return blizzard_cd
+		"rage":      return rage_cd
+		"lightning": return lightning_cd
+		"shield":    return shield_cd
+		"slam":      return slam_cd
+		"meteor":    return meteor_cd
+		"heal":      return heal_cd
+		"howl":      return howl_cd
+	return 0.0
 
 func _melee_attack(heavy: bool) -> void:
 	if combo_timer > 0:
@@ -426,6 +459,72 @@ func _ground_slam() -> void:
 	if is_instance_valid(ring):
 		ring.queue_free()
 
+func _meteor() -> void:
+	if meteor_cd > 0 or mana < 50:
+		return
+	meteor_cd = 20.0
+	mana -= 50
+	emit_signal("mana_changed", int(mana), max_mana)
+	var target_pos = global_position
+	if locked_target and is_instance_valid(locked_target):
+		target_pos = locked_target.global_position
+	else:
+		target_pos = global_position + Vector3(sin(rotation.y), 0, cos(rotation.y)) * 8.0
+	_spawn_meteor_vfx(target_pos)
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e):
+			continue
+		if target_pos.distance_to(e.global_position) < 7.0:
+			var kb = (e.global_position - target_pos).normalized() * 15.0
+			e.take_damage(int(base_damage * 4.5), kb)
+
+func _spawn_meteor_vfx(pos: Vector3) -> void:
+	# Falling rock effect then explosion ring
+	var core = MeshInstance3D.new()
+	core.mesh = SphereMesh.new()
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.4, 0.0, 1)
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.2, 0.0, 1)
+	mat.emission_energy_multiplier = 8.0
+	core.set_surface_override_material(0, mat)
+	get_parent().add_child(core)
+	core.global_position = pos + Vector3(0, 12.0, 0)
+	core.scale = Vector3(2.0, 2.0, 2.0)
+	var t = core.create_tween()
+	t.tween_property(core, "global_position", pos + Vector3(0, 0.5, 0), 0.4)
+	t.tween_property(core, "scale", Vector3(0.3, 0.3, 0.3), 0.1)
+	_spawn_vfx_sphere(pos + Vector3(0, 0.5, 0), 7.0, Color(1.0, 0.5, 0.0, 1), 0.5)
+	await get_tree().create_timer(0.5).timeout
+	if is_instance_valid(core):
+		core.queue_free()
+
+func _heal_spell() -> void:
+	if heal_cd > 0 or mana < 25:
+		return
+	heal_cd = 15.0
+	mana -= 25
+	emit_signal("mana_changed", int(mana), max_mana)
+	hp = min(max_hp, hp + 80)
+	emit_signal("health_changed", hp, max_hp)
+	_spawn_vfx_sphere(global_position + Vector3(0, 1.0, 0), 1.5, Color(0.3, 1.0, 0.5, 1), 0.6)
+
+func _berserker_howl() -> void:
+	if howl_cd > 0 or mana < 60:
+		return
+	howl_cd = 25.0
+	mana -= 60
+	emit_signal("mana_changed", int(mana), max_mana)
+	_spawn_vfx_sphere(global_position + Vector3(0, 1.0, 0), 8.0, Color(0.8, 0.0, 1.0, 1), 0.8)
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e):
+			continue
+		var dist = global_position.distance_to(e.global_position)
+		if dist < 8.0:
+			e.take_damage(int(base_damage * 2.0), Vector3.ZERO)
+			if e.has_method("freeze"):
+				e.freeze(2.5)
+
 func _spawn_vfx_sphere(pos: Vector3, radius: float, col: Color, duration: float) -> void:
 	var vfx = MeshInstance3D.new()
 	var m = SphereMesh.new()
@@ -462,6 +561,9 @@ func _handle_timers(delta: float) -> void:
 	if shield_active > 0:
 		shield_active -= delta
 	if slam_cd     > 0: slam_cd     -= delta
+	if meteor_cd   > 0: meteor_cd   -= delta
+	if heal_cd     > 0: heal_cd     -= delta
+	if howl_cd     > 0: howl_cd     -= delta
 	if dodge_timer > 0:
 		dodge_timer -= delta
 		if dodge_timer <= 0:
@@ -534,3 +636,18 @@ func on_enemy_killed(exp_r: int, gold_r: int, mana_r: float = 8.0) -> void:
 func spartan_rage() -> bool:
 	_spartan_rage()
 	return rage_active > 0
+
+func buy_ability(key: String) -> bool:
+	if key in owned_abilities:
+		return false
+	return true
+
+func add_owned_ability(key: String) -> void:
+	if not key in owned_abilities:
+		owned_abilities.append(key)
+
+func buy_health_potion() -> void:
+	potions += 1
+
+func buy_strength_potion() -> void:
+	base_damage += 8

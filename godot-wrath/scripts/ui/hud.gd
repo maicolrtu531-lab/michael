@@ -13,17 +13,21 @@ var msg_timer  : float = 0.0
 var kill_count : int   = 0
 
 # Spell cooldown labels
-var cd_labels  : Dictionary = {}
+var cd_labels        : Dictionary = {}
+var slot_name_labels : Array = []
+var slot_cost_labels : Array = []
 var player_ref : Node = null
 
-# Spell metadata: key -> [display_name, cd_var, mana_cost, color]
-const SPELLS = {
-	"axe":       ["E  Hacha",       "axe_cd",       15, Color(1.0, 0.7, 0.2, 1)],
-	"blizzard":  ["R  Blizzard",    "blizzard_cd",  25, Color(0.4, 0.8, 1.0, 1)],
-	"rage":      ["Q  Furia",       "rage_cd",      30, Color(1.0, 0.3, 0.0, 1)],
-	"lightning": ["1  Rayo",        "lightning_cd", 20, Color(1.0, 1.0, 0.3, 1)],
-	"shield":    ["2  Escudo Div.", "shield_cd",    20, Color(0.3, 0.6, 1.0, 1)],
-	"slam":      ["3  Terremoto",   "slam_cd",      30, Color(0.9, 0.5, 0.1, 1)],
+const ABILITY_DATA = {
+	"axe":      {"name": "Hacha",          "stars": 1, "mp": 15, "color": Color(1.0, 0.7, 0.2, 1)},
+	"blizzard": {"name": "Blizzard",       "stars": 2, "mp": 25, "color": Color(0.4, 0.8, 1.0, 1)},
+	"slam":     {"name": "Terremoto",      "stars": 3, "mp": 30, "color": Color(0.9, 0.5, 0.1, 1)},
+	"lightning":{"name": "Rayo",           "stars": 3, "mp": 20, "color": Color(1.0, 1.0, 0.3, 1)},
+	"heal":     {"name": "Curación",       "stars": 3, "mp": 25, "color": Color(0.3, 1.0, 0.5, 1)},
+	"shield":   {"name": "Escudo Divino",  "stars": 4, "mp": 20, "color": Color(0.3, 0.6, 1.0, 1)},
+	"rage":     {"name": "Furia Espartana","stars": 4, "mp": 30, "color": Color(1.0, 0.3, 0.0, 1)},
+	"meteor":   {"name": "Meteoro",        "stars": 5, "mp": 50, "color": Color(1.0, 0.5, 0.0, 1)},
+	"howl":     {"name": "Aullido Berserk","stars": 6, "mp": 60, "color": Color(0.8, 0.0, 1.0, 1)},
 }
 
 func _ready() -> void:
@@ -130,33 +134,40 @@ func _build_ui() -> void:
 	spell_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	spell_panel.add_child(spell_hbox)
 
-	for key in ["axe", "blizzard", "rage", "lightning", "shield", "slam"]:
-		var data  = SPELLS[key]
+	for i in range(6):
 		var vb    = VBoxContainer.new()
 		vb.custom_minimum_size = Vector2(90, 60)
 		spell_hbox.add_child(vb)
 
+		var key_lbl = Label.new()
+		key_lbl.text = ["E","R","Q","1","2","3"][i]
+		key_lbl.add_theme_font_size_override("font_size", 10)
+		key_lbl.add_theme_color_override("font_color", Color.GRAY)
+		key_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		vb.add_child(key_lbl)
+
 		var name_lbl = Label.new()
-		name_lbl.text = data[0]
+		name_lbl.text = "—"
 		name_lbl.add_theme_font_size_override("font_size", 11)
-		name_lbl.add_theme_color_override("font_color", data[3])
 		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		vb.add_child(name_lbl)
+		slot_name_labels.append(name_lbl)
 
 		var cost_lbl = Label.new()
-		cost_lbl.text = "%d MP" % data[2]
+		cost_lbl.text = "— MP"
 		cost_lbl.add_theme_font_size_override("font_size", 10)
 		cost_lbl.add_theme_color_override("font_color", Color(0.5, 0.7, 1.0, 1))
 		cost_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		vb.add_child(cost_lbl)
+		slot_cost_labels.append(cost_lbl)
 
 		var cd_lbl = Label.new()
-		cd_lbl.text = "Listo"
+		cd_lbl.text = "—"
 		cd_lbl.add_theme_font_size_override("font_size", 11)
-		cd_lbl.add_theme_color_override("font_color", Color(0.0, 1.0, 0.4, 1))
+		cd_lbl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
 		cd_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		vb.add_child(cd_lbl)
-		cd_labels[key] = cd_lbl
+		cd_labels[i] = cd_lbl
 
 	# Center: big message
 	msg_label = Label.new()
@@ -181,23 +192,32 @@ func _process(delta: float) -> void:
 	if not player_ref or not is_instance_valid(player_ref):
 		return
 
-	var cd_map = {
-		"axe":       player_ref.axe_cd,
-		"blizzard":  player_ref.blizzard_cd,
-		"rage":      player_ref.rage_cd,
-		"lightning": player_ref.lightning_cd,
-		"shield":    player_ref.shield_cd,
-		"slam":      player_ref.slam_cd,
-	}
-	for key in cd_map:
-		var lbl : Label = cd_labels[key]
-		var cd  : float = cd_map[key]
+	var slots = player_ref.active_slots
+	for i in range(6):
+		var key  = slots[i] if i < slots.size() else ""
+		var name_lbl : Label = slot_name_labels[i]
+		var cost_lbl : Label = slot_cost_labels[i]
+		var cd_lbl   : Label = cd_labels[i]
+
+		if key == "" or not key in ABILITY_DATA:
+			name_lbl.text = "—"
+			cost_lbl.text = "— MP"
+			cd_lbl.text   = "—"
+			cd_lbl.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4, 1))
+			continue
+
+		var data = ABILITY_DATA[key]
+		name_lbl.text = data["name"]
+		name_lbl.add_theme_color_override("font_color", data["color"])
+		cost_lbl.text = "%d MP" % data["mp"]
+
+		var cd : float = player_ref.get_ability_cd(key)
 		if cd > 0:
-			lbl.text = "%.1fs" % cd
-			lbl.add_theme_color_override("font_color", Color(1.0, 0.4, 0.2, 1))
+			cd_lbl.text = "%.1fs" % cd
+			cd_lbl.add_theme_color_override("font_color", Color(1.0, 0.4, 0.2, 1))
 		else:
-			lbl.text = "Listo"
-			lbl.add_theme_color_override("font_color", Color(0.0, 1.0, 0.4, 1))
+			cd_lbl.text = "Listo"
+			cd_lbl.add_theme_color_override("font_color", Color(0.0, 1.0, 0.4, 1))
 
 func connect_player(player: Node) -> void:
 	if not player:

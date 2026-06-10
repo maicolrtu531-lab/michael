@@ -6,10 +6,12 @@ var wave_timer    : float = 0.0
 var between_waves : bool  = false
 var total_gold    : int   = 0
 
-var player       : Node3D = null
-var hud          : CanvasLayer = null
-var stats_menu   : CanvasLayer = null
-var spawn_points : Node3D = null
+var player         : Node3D = null
+var hud            : CanvasLayer = null
+var stats_menu     : CanvasLayer = null
+var shop_menu      : CanvasLayer = null
+var inventory_menu : CanvasLayer = null
+var spawn_points   : Node3D = null
 
 signal wave_started(wave_number)
 signal wave_cleared(wave_number)
@@ -29,10 +31,12 @@ var WAVES : Array = [
 ]
 
 func _ready() -> void:
-	player       = get_node_or_null("Player")
-	hud          = get_node_or_null("HUD")
-	stats_menu   = get_node_or_null("StatsMenu")
-	spawn_points = get_node_or_null("SpawnPoints")
+	player         = get_node_or_null("Player")
+	hud            = get_node_or_null("HUD")
+	stats_menu     = get_node_or_null("StatsMenu")
+	shop_menu      = get_node_or_null("Shop")
+	inventory_menu = get_node_or_null("InventoryMenu")
+	spawn_points   = get_node_or_null("SpawnPoints")
 
 	if player:
 		if player.has_signal("died"):
@@ -45,6 +49,10 @@ func _ready() -> void:
 
 	if stats_menu and player:
 		stats_menu.connect_player(player)
+	if shop_menu and player:
+		shop_menu.connect_player(player)
+	if inventory_menu and player:
+		inventory_menu.connect_player(player)
 
 	await get_tree().create_timer(0.5).timeout
 	_start_wave(0)
@@ -67,6 +75,12 @@ func _input(event: InputEvent) -> void:
 		elif event.keycode == KEY_TAB:
 			if stats_menu:
 				stats_menu.toggle()
+		elif event.keycode == KEY_B:
+			if shop_menu:
+				shop_menu.toggle()
+		elif event.keycode == KEY_I:
+			if inventory_menu:
+				inventory_menu.toggle()
 
 func _start_wave(wave_idx: int) -> void:
 	emit_signal("wave_started", wave_idx + 1)
