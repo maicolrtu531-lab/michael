@@ -574,3 +574,36 @@ ee3131d chore: update session log
 1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
 ---
 
+## Session End: 20260610_155617
+### Commits
+4e1be49 chore: update session logs
+3137fa8 chore: update session logs
+7bf4355 feat: shop, inventory, ability ownership + 3 new spells (★1-★6)
+4a3fad5 chore: update session logs
+fc528e1 chore: update session logs
+06a7178 feat: add enemy HP bars (Label3D) and wired stats menu (TAB)
+f0f6400 chore: update session log
+8bffb9e chore: update session log
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+---
+
+## Session End: 20260610_164222
+### Commits
+e18a2fa feat: 10 waves (+2 enemies/wave), mouse free on menus, input blocked while menus open
+4e1be49 chore: update session logs
+3137fa8 chore: update session logs
+7bf4355 feat: shop, inventory, ability ownership + 3 new spells (★1-★6)
+4a3fad5 chore: update session logs
+fc528e1 chore: update session logs
+06a7178 feat: add enemy HP bars (Label3D) and wired stats menu (TAB)
+f0f6400 chore: update session log
+8bffb9e chore: update session log
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+### Uncommitted Changes
+production/session-logs/session-log.md
+---
+
