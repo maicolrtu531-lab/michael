@@ -15,6 +15,7 @@ var attack_cd    : float = 0.0
 var frozen_timer : float = 0.0
 var knockback    : Vector3 = Vector3.ZERO
 var gravity_vel  : float = 0.0
+var _anim_timer  : float = 0.0
 
 enum State { IDLE, CHASE, ATTACK, DEAD }
 var state  : State = State.IDLE
@@ -159,6 +160,9 @@ func _physics_process(delta: float) -> void:
 					player.take_damage(attack_dmg)
 				_flash(Color(1.0, 0.3, 0.0, 1))
 
+	_anim_timer += delta * (3.0 if state == State.CHASE else 1.5)
+	if mesh:
+		mesh.position.y = mesh.position.y + sin(_anim_timer) * 0.008
 	move_and_slide()
 	_update_hp_bar()
 
@@ -211,6 +215,10 @@ func _die() -> void:
 	is_dead = true
 	state   = State.DEAD
 	velocity = Vector3.ZERO
+	if mesh:
+		var t = create_tween()
+		t.tween_property(mesh, "scale", Vector3(1.3, 0.1, 1.3), 0.5)
+		t.tween_property(mesh, "modulate", Color(1, 1, 1, 0), 0.3)
 	if name_label:  name_label.visible  = false
 	if hp_bar_bg:   hp_bar_bg.visible   = false
 	if hp_bar_fg:   hp_bar_fg.visible   = false

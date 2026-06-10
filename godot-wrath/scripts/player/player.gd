@@ -39,6 +39,12 @@ var locked_target : Node3D = null
 var lock_range    : float  = 14.0
 var melee_range   : float  = 2.5   # distance for melee hit detection
 
+var _tween : Tween = null
+var _sword_node : MeshInstance3D = null
+var _body_node  : MeshInstance3D = null
+var _bob_timer  : float = 0.0
+var _is_moving  : bool  = false
+
 signal health_changed(current, maximum)
 signal mana_changed(current, maximum)
 signal level_up(new_level)
@@ -56,6 +62,19 @@ func _ready() -> void:
 	mana = max_mana
 	add_to_group("player")
 	Input.mouse_mode = Input.MOUSE_MODE_CONFINED_HIDDEN
+	_sword_node = get_node_or_null("Sword")
+	_body_node  = get_node_or_null("Body")
+
+func _animate(delta: float) -> void:
+	var moving = velocity.length() > 1.0 and is_on_floor()
+	if moving:
+		_bob_timer += delta * 8.0
+		if _body_node:
+			_body_node.position.y = 0.75 + sin(_bob_timer) * 0.04
+		if _sword_node:
+			_sword_node.position.y = 0.9 + sin(_bob_timer * 0.5) * 0.03
+	elif _body_node:
+		_body_node.position.y = lerp(_body_node.position.y, 0.75, 8.0 * delta)
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and not locked_target:
@@ -74,6 +93,7 @@ func _physics_process(delta: float) -> void:
 	_handle_combat()
 	_handle_spells()
 	_regen_mana(delta)
+	_animate(delta)
 	move_and_slide()
 
 func _apply_gravity(delta: float) -> void:
@@ -142,6 +162,11 @@ func _start_dodge(dir: Vector3) -> void:
 	dodge_timer = 0.32
 	invincible  = 0.38
 	dodge_dir   = dir
+	# Visual lean during dodge
+	if _body_node and _tween == null or (_tween != null and not _tween.is_running()):
+		var lean = create_tween()
+		lean.tween_property(_body_node, "rotation_degrees", Vector3(25, 0, 0), 0.15)
+		lean.tween_property(_body_node, "rotation_degrees", Vector3(0, 0, 0), 0.2)
 
 func _handle_combat() -> void:
 	if attack_cd > 0 or is_dodging:
@@ -173,6 +198,7 @@ func _melee_attack(heavy: bool) -> void:
 	combo_timer  = 0.55
 	attack_cd    = 0.35 if not heavy else 0.6
 	is_attacking = true
+	_swing_sword()
 
 	var dmg_mult = 2.0 if heavy else 1.0
 	if combo_count == 2: dmg_mult *= 1.5
@@ -194,6 +220,17 @@ func _melee_attack(heavy: bool) -> void:
 			continue
 		var kb = diff.normalized() * 7.0
 		e.take_damage(dmg, kb)
+
+func _swing_sword() -> void:
+	if not _sword_node:
+		return
+	if _tween:
+		_tween.kill()
+	_tween = create_tween()
+	_tween.tween_property(_sword_node, "position", Vector3(0.45, 1.2, -0.3), 0.12)
+	_tween.tween_property(_sword_node, "rotation_degrees", Vector3(-60, 0, 0), 0.12)
+	_tween.tween_property(_sword_node, "position", Vector3(0.45, 0.9, 0.1), 0.15)
+	_tween.tween_property(_sword_node, "rotation_degrees", Vector3(0, 0, 0), 0.15)
 
 func _throw_axe() -> void:
 	if axe_cd > 0 or mana < 15:
