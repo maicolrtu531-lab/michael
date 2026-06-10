@@ -286,58 +286,100 @@ func _make_enemy_limb(col: Color) -> MeshInstance3D:
 	return limb
 
 func _drop_item() -> void:
-	var roll = randf()
-	var item : Dictionary = {}
-	if roll < 0.5:
-		var tier = min(int(randf() * 6), 5)
+	var is_weapon = randf() < 0.5
+	var tier = min(int(randf() * 6), 5)
+	var item : Dictionary
+	if is_weapon:
 		item = player.WEAPON_DROPS[tier].duplicate()
 	else:
-		var tier = min(int(randf() * 6), 5)
 		item = player.ARMOR_DROPS[tier].duplicate()
-	if item.is_empty():
-		return
 
-	# Spawn pickup node
-	var pickup = MeshInstance3D.new()
-	var m = BoxMesh.new()
-	m.size = Vector3(0.4, 0.4, 0.4)
-	pickup.mesh = m
+	# Root pickup node (carries the script)
+	var pickup_root = Node3D.new()
+	pickup_root.set_script(load("res://scripts/world/item_pickup.gd"))
+
+	# Visual mesh
+	var mesh_node = MeshInstance3D.new()
 	var mat = StandardMaterial3D.new()
-	mat.albedo_color = Color(1.0, 0.85, 0.1, 1) if item.has("damage_bonus") else Color(0.3, 0.7, 1.0, 1)
-	mat.emission_enabled = true
-	mat.emission = mat.albedo_color
-	mat.emission_energy_multiplier = 2.0
-	pickup.set_surface_override_material(0, mat)
 
+	if is_weapon:
+		# Sword shape: thin tall box (blade) + wide short box (guard)
+		var arr = ArrayMesh.new()
+		# blade
+		var blade = BoxMesh.new()
+		blade.size = Vector3(0.06, 0.55, 0.04)
+		var blade_node = MeshInstance3D.new()
+		blade_node.mesh = blade
+		blade_node.position = Vector3(0, 0.3, 0)
+		var blade_mat = StandardMaterial3D.new()
+		blade_mat.albedo_color = Color(0.85, 0.85, 0.95, 1)
+		blade_mat.metallic = 0.9
+		blade_mat.roughness = 0.15
+		blade_mat.emission_enabled = true
+		blade_mat.emission = Color(1.0, 0.9, 0.3, 1)
+		blade_mat.emission_energy_multiplier = 1.5
+		blade_node.set_surface_override_material(0, blade_mat)
+		pickup_root.add_child(blade_node)
+		# guard
+		var guard = BoxMesh.new()
+		guard.size = Vector3(0.22, 0.05, 0.06)
+		var guard_node = MeshInstance3D.new()
+		guard_node.mesh = guard
+		guard_node.position = Vector3(0, 0.04, 0)
+		var guard_mat = StandardMaterial3D.new()
+		guard_mat.albedo_color = Color(0.7, 0.5, 0.1, 1)
+		guard_mat.metallic = 0.8
+		guard_node.set_surface_override_material(0, guard_mat)
+		pickup_root.add_child(guard_node)
+		# handle
+		var handle = BoxMesh.new()
+		handle.size = Vector3(0.055, 0.22, 0.055)
+		var handle_node = MeshInstance3D.new()
+		handle_node.mesh = handle
+		handle_node.position = Vector3(0, -0.13, 0)
+		var handle_mat = StandardMaterial3D.new()
+		handle_mat.albedo_color = Color(0.35, 0.2, 0.05, 1)
+		handle_node.set_surface_override_material(0, handle_mat)
+		pickup_root.add_child(handle_node)
+	else:
+		# Armor shape: wide flat torso piece
+		var chest = BoxMesh.new()
+		chest.size = Vector3(0.5, 0.4, 0.12)
+		var chest_node = MeshInstance3D.new()
+		chest_node.mesh = chest
+		chest_node.position = Vector3(0, 0.2, 0)
+		var chest_mat = StandardMaterial3D.new()
+		chest_mat.albedo_color = Color(0.3, 0.45, 0.7, 1)
+		chest_mat.metallic = 0.7
+		chest_mat.roughness = 0.3
+		chest_mat.emission_enabled = true
+		chest_mat.emission = Color(0.2, 0.5, 1.0, 1)
+		chest_mat.emission_energy_multiplier = 1.2
+		chest_node.set_surface_override_material(0, chest_mat)
+		pickup_root.add_child(chest_node)
+		# shoulder pads
+		for side in [-1, 1]:
+			var shoulder = BoxMesh.new()
+			shoulder.size = Vector3(0.14, 0.14, 0.14)
+			var sh_node = MeshInstance3D.new()
+			sh_node.mesh = shoulder
+			sh_node.position = Vector3(side * 0.32, 0.3, 0)
+			var sh_mat = StandardMaterial3D.new()
+			sh_mat.albedo_color = Color(0.25, 0.4, 0.65, 1)
+			sh_mat.metallic = 0.8
+			sh_node.set_surface_override_material(0, sh_mat)
+			pickup_root.add_child(sh_node)
+
+	# Label
 	var label = Label3D.new()
 	label.text = item["name"]
 	label.font_size = 18
+	label.modulate = Color(1.0, 0.9, 0.2, 1) if is_weapon else Color(0.4, 0.8, 1.0, 1)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
-	label.position = Vector3(0, 0.6, 0)
-	pickup.add_child(label)
+	label.position = Vector3(0, 0.85, 0)
+	pickup_root.add_child(label)
 
-	get_parent().add_child(pickup)
-	pickup.global_position = global_position + Vector3(0, 0.3, 0)
-
-	# Auto-collect when player walks near
-	_watch_pickup(pickup, item)
-
-func _watch_pickup(pickup: MeshInstance3D, item: Dictionary) -> void:
-	var elapsed = 0.0
-	while elapsed < 15.0:
-		await get_tree().create_timer(0.3).timeout
-		elapsed += 0.3
-		if not is_instance_valid(pickup):
-			return
-		if not is_instance_valid(player):
-			return
-		if pickup.global_position.distance_to(player.global_position) < 1.8:
-			player.receive_item_drop(item)
-			pickup.queue_free()
-			return
-		# Spin the pickup
-		if is_instance_valid(pickup):
-			pickup.rotation.y += 0.3
-	if is_instance_valid(pickup):
-		pickup.queue_free()
+	get_parent().add_child(pickup_root)
+	pickup_root.global_position = global_position + Vector3(0, 0.3, 0)
+	pickup_root.item = item

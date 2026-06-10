@@ -81,7 +81,7 @@ func _any_menu_open() -> bool:
 
 func _update_mouse_mode() -> void:
 	var open = _any_menu_open()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if open else Input.MOUSE_MODE_CONFINED_HIDDEN
+	Input.mouse_mode = Input.MOUSE_MODE_CONFINED if open else Input.MOUSE_MODE_CONFINED_HIDDEN
 	if player:
 		player.menu_open = open
 

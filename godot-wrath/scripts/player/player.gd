@@ -75,7 +75,7 @@ var melee_range   : float  = 2.5
 var menu_open   : bool  = false
 
 var _tween      : Tween = null
-var _sword_node : MeshInstance3D = null
+var _sword_node : Node3D = null
 var _body_node  : MeshInstance3D = null
 var _shield_mesh: MeshInstance3D = null
 var _bob_timer  : float = 0.0
@@ -123,11 +123,11 @@ func _build_body() -> void:
 	_head_node.position = Vector3(0, 1.7, 0)
 	add_child(_head_node)
 
-	# Torso already exists as $Body — just recolor it skin-tone
+	# Torso
 	if _body_node:
 		var mat = _body_node.get_surface_override_material(0)
 		if mat:
-			mat.albedo_color = Color(0.25, 0.35, 0.65, 1)  # blue armor
+			mat.albedo_color = Color(0.25, 0.35, 0.65, 1)
 
 	# Arms
 	_arm_l = _make_limb(Color(0.25, 0.35, 0.65, 1))
@@ -146,6 +146,47 @@ func _build_body() -> void:
 	_leg_r = _make_limb(Color(0.18, 0.18, 0.28, 1))
 	_leg_r.position = Vector3(0.18, 0.4, 0)
 	add_child(_leg_r)
+
+	# Sword — replace plain box with proper blade shape
+	if _sword_node:
+		_sword_node.queue_free()
+	var sword_root = Node3D.new()
+	sword_root.position = Vector3(0.45, 0.9, 0.1)
+	add_child(sword_root)
+	_sword_node = sword_root as MeshInstance3D  # keep ref for swing tween via parent
+
+	var blade_n = MeshInstance3D.new()
+	var blade_m = BoxMesh.new()
+	blade_m.size = Vector3(0.06, 0.55, 0.04)
+	blade_n.mesh = blade_m
+	blade_n.position = Vector3(0, 0.3, 0)
+	var blade_mat = StandardMaterial3D.new()
+	blade_mat.albedo_color = Color(0.88, 0.88, 0.95, 1)
+	blade_mat.metallic = 0.95
+	blade_mat.roughness = 0.1
+	sword_root.add_child(blade_n)
+
+	var guard_n = MeshInstance3D.new()
+	var guard_m = BoxMesh.new()
+	guard_m.size = Vector3(0.22, 0.05, 0.06)
+	guard_n.mesh = guard_m
+	guard_n.position = Vector3(0, 0.04, 0)
+	var guard_mat = StandardMaterial3D.new()
+	guard_mat.albedo_color = Color(0.7, 0.5, 0.1, 1)
+	guard_mat.metallic = 0.8
+	sword_root.add_child(guard_n)
+
+	var handle_n = MeshInstance3D.new()
+	var handle_m = BoxMesh.new()
+	handle_m.size = Vector3(0.055, 0.22, 0.055)
+	handle_n.mesh = handle_m
+	handle_n.position = Vector3(0, -0.12, 0)
+	var handle_mat = StandardMaterial3D.new()
+	handle_mat.albedo_color = Color(0.35, 0.2, 0.05, 1)
+	sword_root.add_child(handle_n)
+
+	# Re-assign _sword_node to the root so swing tween works
+	_sword_node = sword_root as MeshInstance3D
 
 func _make_limb(col: Color) -> MeshInstance3D:
 	var limb = MeshInstance3D.new()
