@@ -26,7 +26,8 @@ signal died(enemy)
 @onready var mesh : MeshInstance3D = $Mesh
 
 # UI nodes created at runtime
-var name_label  : Label3D        = null
+var name_label  : Label3D = null
+var hp_label    : Label3D = null
 var hp_bar_bg   : MeshInstance3D = null
 var hp_bar_fg   : MeshInstance3D = null
 var hp_bar_mat  : StandardMaterial3D = null
@@ -49,57 +50,37 @@ func _build_overhead_ui() -> void:
 
 	# Name label
 	name_label = Label3D.new()
-	name_label.text       = enemy_name
-	name_label.font_size  = 28
-	name_label.modulate   = Color(1.0, 0.9, 0.2, 1)
-	name_label.outline_size = 6
-	name_label.outline_modulate = Color(0, 0, 0, 1)
-	name_label.billboard  = BaseMaterial3D.BILLBOARD_ENABLED
-	name_label.no_depth_test = true
-	name_label.position   = Vector3(0, bar_height + 0.35, 0)
+	name_label.text              = enemy_name
+	name_label.font_size         = 28
+	name_label.modulate          = Color(1.0, 0.9, 0.2, 1)
+	name_label.outline_size      = 6
+	name_label.outline_modulate  = Color(0, 0, 0, 1)
+	name_label.billboard         = BaseMaterial3D.BILLBOARD_ENABLED
+	name_label.no_depth_test     = true
+	name_label.position          = Vector3(0, bar_height + 0.45, 0)
 	add_child(name_label)
 
-	# HP bar background (gray)
-	hp_bar_bg = MeshInstance3D.new()
-	var bg_mesh    = BoxMesh.new()
-	bg_mesh.size   = Vector3(1.1, 0.14, 0.02)
-	hp_bar_bg.mesh = bg_mesh
-	var bg_mat           = StandardMaterial3D.new()
-	bg_mat.albedo_color  = Color(0.15, 0.15, 0.15, 1)
-	bg_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	bg_mat.no_depth_test = true
-	hp_bar_bg.set_surface_override_material(0, bg_mat)
-	hp_bar_bg.position = Vector3(0, bar_height, 0)
-	add_child(hp_bar_bg)
-
-	# HP bar foreground (red/green)
-	hp_bar_fg = MeshInstance3D.new()
-	var fg_mesh    = BoxMesh.new()
-	fg_mesh.size   = Vector3(1.0, 0.10, 0.03)
-	hp_bar_fg.mesh = fg_mesh
-	hp_bar_mat           = StandardMaterial3D.new()
-	hp_bar_mat.albedo_color  = Color(0.0, 0.85, 0.1, 1)
-	hp_bar_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	hp_bar_mat.no_depth_test = true
-	hp_bar_mat.emission_enabled = true
-	hp_bar_mat.emission = Color(0.0, 0.5, 0.05, 1)
-	hp_bar_mat.emission_energy_multiplier = 0.5
-	hp_bar_fg.set_surface_override_material(0, hp_bar_mat)
-	hp_bar_fg.position = Vector3(0, bar_height, 0.01)
-	add_child(hp_bar_fg)
+	# HP as Label3D (reliable in Godot 4.6)
+	hp_label = Label3D.new()
+	hp_label.text             = "HP: %d / %d" % [hp, max_hp]
+	hp_label.font_size        = 20
+	hp_label.modulate         = Color(0.2, 1.0, 0.3, 1)
+	hp_label.outline_size     = 4
+	hp_label.outline_modulate = Color(0, 0, 0, 1)
+	hp_label.billboard        = BaseMaterial3D.BILLBOARD_ENABLED
+	hp_label.no_depth_test    = true
+	hp_label.position         = Vector3(0, bar_height, 0)
+	add_child(hp_label)
 
 func _get_bar_height() -> float:
 	return 2.0
 
 func _update_hp_bar() -> void:
-	if not hp_bar_fg or not hp_bar_mat:
+	if not hp_label:
 		return
 	var ratio = clamp(float(hp) / float(max_hp), 0.0, 1.0)
-	hp_bar_fg.scale.x = ratio
-	hp_bar_fg.position.x = (ratio - 1.0) * 0.5  # anchor left
-	var col = Color(1.0 - ratio, ratio * 0.85, 0.05, 1)
-	hp_bar_mat.albedo_color = col
-	hp_bar_mat.emission     = col * 0.5
+	hp_label.text    = "HP: %d / %d" % [hp, max_hp]
+	hp_label.modulate = Color(1.0 - ratio, ratio * 0.85 + 0.1, 0.1, 1)
 
 func _physics_process(delta: float) -> void:
 	if is_dead:
@@ -223,9 +204,8 @@ func _die() -> void:
 			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 			var orig = mat.albedo_color
 			t.tween_method(func(a: float): mat.albedo_color = Color(orig.r, orig.g, orig.b, a), 1.0, 0.0, 0.3)
-	if name_label:  name_label.visible  = false
-	if hp_bar_bg:   hp_bar_bg.visible   = false
-	if hp_bar_fg:   hp_bar_fg.visible   = false
+	if name_label: name_label.visible = false
+	if hp_label:   hp_label.visible   = false
 	emit_signal("died", self)
 	if player and player.has_method("on_enemy_killed"):
 		player.on_enemy_killed(exp_reward, gold_reward)
