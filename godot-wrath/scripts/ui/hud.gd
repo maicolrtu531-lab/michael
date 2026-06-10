@@ -12,6 +12,20 @@ var msg_label  : Label
 var msg_timer  : float = 0.0
 var kill_count : int   = 0
 
+# Spell cooldown labels
+var cd_labels  : Dictionary = {}
+var player_ref : Node = null
+
+# Spell metadata: key -> [display_name, cd_var, mana_cost, color]
+const SPELLS = {
+	"axe":       ["E  Hacha",       "axe_cd",       15, Color(1.0, 0.7, 0.2, 1)],
+	"blizzard":  ["R  Blizzard",    "blizzard_cd",  25, Color(0.4, 0.8, 1.0, 1)],
+	"rage":      ["Q  Furia",       "rage_cd",      30, Color(1.0, 0.3, 0.0, 1)],
+	"lightning": ["1  Rayo",        "lightning_cd", 20, Color(1.0, 1.0, 0.3, 1)],
+	"shield":    ["2  Escudo Div.", "shield_cd",    20, Color(0.3, 0.6, 1.0, 1)],
+	"slam":      ["3  Terremoto",   "slam_cd",      30, Color(0.9, 0.5, 0.1, 1)],
+}
+
 func _ready() -> void:
 	_build_ui()
 
@@ -100,19 +114,49 @@ func _build_ui() -> void:
 	wave_label.add_theme_font_size_override("font_size", 24)
 	add_child(wave_label)
 
-	# Bottom-center: hint
-	var hint = Label.new()
-	hint.text = "LMB Ataque | RMB Pesado | E Hacha | SPACE Esquivar | F Poción | T Lock"
-	hint.anchor_left   = 0.5
-	hint.anchor_right  = 0.5
-	hint.anchor_top    = 1.0
-	hint.anchor_bottom = 1.0
-	hint.offset_left   = -320
-	hint.offset_top    = -25
-	hint.offset_right  = 320
-	hint.offset_bottom = -5
-	hint.add_theme_font_size_override("font_size", 11)
-	add_child(hint)
+	# Bottom-center: spell bar
+	var spell_panel = PanelContainer.new()
+	spell_panel.anchor_left   = 0.5
+	spell_panel.anchor_right  = 0.5
+	spell_panel.anchor_top    = 1.0
+	spell_panel.anchor_bottom = 1.0
+	spell_panel.offset_left   = -300
+	spell_panel.offset_top    = -90
+	spell_panel.offset_right  = 300
+	spell_panel.offset_bottom = -10
+	add_child(spell_panel)
+
+	var spell_hbox = HBoxContainer.new()
+	spell_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	spell_panel.add_child(spell_hbox)
+
+	for key in ["axe", "blizzard", "rage", "lightning", "shield", "slam"]:
+		var data  = SPELLS[key]
+		var vb    = VBoxContainer.new()
+		vb.custom_minimum_size = Vector2(90, 60)
+		spell_hbox.add_child(vb)
+
+		var name_lbl = Label.new()
+		name_lbl.text = data[0]
+		name_lbl.add_theme_font_size_override("font_size", 11)
+		name_lbl.add_theme_color_override("font_color", data[3])
+		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		vb.add_child(name_lbl)
+
+		var cost_lbl = Label.new()
+		cost_lbl.text = "%d MP" % data[2]
+		cost_lbl.add_theme_font_size_override("font_size", 10)
+		cost_lbl.add_theme_color_override("font_color", Color(0.5, 0.7, 1.0, 1))
+		cost_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		vb.add_child(cost_lbl)
+
+		var cd_lbl = Label.new()
+		cd_lbl.text = "Listo"
+		cd_lbl.add_theme_font_size_override("font_size", 11)
+		cd_lbl.add_theme_color_override("font_color", Color(0.0, 1.0, 0.4, 1))
+		cd_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		vb.add_child(cd_lbl)
+		cd_labels[key] = cd_lbl
 
 	# Center: big message
 	msg_label = Label.new()
@@ -134,9 +178,31 @@ func _process(delta: float) -> void:
 		if msg_timer <= 0:
 			msg_label.text = ""
 
+	if not player_ref or not is_instance_valid(player_ref):
+		return
+
+	var cd_map = {
+		"axe":       player_ref.axe_cd,
+		"blizzard":  player_ref.blizzard_cd,
+		"rage":      player_ref.rage_cd,
+		"lightning": player_ref.lightning_cd,
+		"shield":    player_ref.shield_cd,
+		"slam":      player_ref.slam_cd,
+	}
+	for key in cd_map:
+		var lbl : Label = cd_labels[key]
+		var cd  : float = cd_map[key]
+		if cd > 0:
+			lbl.text = "%.1fs" % cd
+			lbl.add_theme_color_override("font_color", Color(1.0, 0.4, 0.2, 1))
+		else:
+			lbl.text = "Listo"
+			lbl.add_theme_color_override("font_color", Color(0.0, 1.0, 0.4, 1))
+
 func connect_player(player: Node) -> void:
 	if not player:
 		return
+	player_ref = player
 	if player.has_signal("health_changed"):
 		player.health_changed.connect(_on_hp_changed)
 	if player.has_signal("mana_changed"):

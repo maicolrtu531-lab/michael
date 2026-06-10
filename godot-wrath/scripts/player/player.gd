@@ -29,21 +29,27 @@ var rage_active  : float = 0.0
 var rage_cd      : float = 0.0
 var axe_cd       : float = 0.0
 var blizzard_cd  : float = 0.0
+var lightning_cd : float = 0.0
+var shield_cd    : float = 0.0
+var shield_active: float = 0.0
+var slam_cd      : float = 0.0
 var mana_regen   : float = 3.0
 
 # Camera stored as world-space angles so player body rotation doesn't affect it
 var cam_yaw   : float = 0.0
-var cam_pitch : float = -0.35   # ~-20 degrees
+var cam_pitch : float = -0.35
 
 var locked_target : Node3D = null
 var lock_range    : float  = 14.0
-var melee_range   : float  = 2.5   # distance for melee hit detection
+var melee_range   : float  = 2.5
 
-var _tween : Tween = null
+var _tween      : Tween = null
 var _sword_node : MeshInstance3D = null
 var _body_node  : MeshInstance3D = null
+var _shield_mesh: MeshInstance3D = null
 var _bob_timer  : float = 0.0
 var _is_moving  : bool  = false
+var _shield_vfx : MeshInstance3D = null
 
 signal health_changed(current, maximum)
 signal mana_changed(current, maximum)
@@ -62,8 +68,9 @@ func _ready() -> void:
 	mana = max_mana
 	add_to_group("player")
 	Input.mouse_mode = Input.MOUSE_MODE_CONFINED_HIDDEN
-	_sword_node = get_node_or_null("Sword")
-	_body_node  = get_node_or_null("Body")
+	_sword_node  = get_node_or_null("Sword")
+	_body_node   = get_node_or_null("Body")
+	_shield_mesh = get_node_or_null("Shield")
 
 func _animate(delta: float) -> void:
 	var moving = velocity.length() > 1.0 and is_on_floor()
@@ -75,6 +82,23 @@ func _animate(delta: float) -> void:
 			_sword_node.position.y = 0.9 + sin(_bob_timer * 0.5) * 0.03
 	elif _body_node:
 		_body_node.position.y = lerp(_body_node.position.y, 0.75, 8.0 * delta)
+
+	# Rage glow on body
+	if _body_node and rage_active > 0:
+		var mat = _body_node.get_surface_override_material(0)
+		if mat:
+			mat.emission_enabled = true
+			mat.emission = Color(1.0, 0.3, 0.0, 1)
+			mat.emission_energy_multiplier = 1.5
+	elif _body_node:
+		var mat = _body_node.get_surface_override_material(0)
+		if mat and mat.emission_enabled:
+			mat.emission_energy_multiplier = 0.0
+			mat.emission_enabled = false
+
+	# Shield bubble pulse
+	if _shield_vfx and is_instance_valid(_shield_vfx):
+		_shield_vfx.scale = Vector3.ONE * (1.0 + sin(_bob_timer * 3.0) * 0.05)
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and not locked_target:
@@ -109,7 +133,6 @@ func _apply_camera(delta: float) -> void:
 		to.y = 0
 		if to.length() > 0.1:
 			cam_yaw = lerp_angle(cam_yaw, atan2(to.x, to.z) + PI, 6.0 * delta)
-	# Local rotation = world cam_yaw minus player body yaw → camera stays fixed in world space
 	camera_arm.rotation.y = cam_yaw - rotation.y
 	camera_arm.rotation.x = cam_pitch
 
@@ -127,7 +150,6 @@ func _handle_movement(delta: float) -> void:
 	var iz = Input.get_axis("move_forward", "move_backward")
 	var input_dir = Vector2(ix, iz)
 
-	# Move relative to camera yaw (world-space)
 	var cy = cos(cam_yaw)
 	var sy = sin(cam_yaw)
 	var move_dir = Vector3(
@@ -141,7 +163,6 @@ func _handle_movement(delta: float) -> void:
 	if move_dir.length() > 0.1:
 		velocity.x = move_dir.x * spd
 		velocity.z = move_dir.z * spd
-		# Face movement direction (or locked target)
 		var face_dir = move_dir
 		if locked_target and is_instance_valid(locked_target):
 			var to = locked_target.global_position - global_position
@@ -162,8 +183,7 @@ func _start_dodge(dir: Vector3) -> void:
 	dodge_timer = 0.32
 	invincible  = 0.38
 	dodge_dir   = dir
-	# Visual lean during dodge
-	if _body_node and _tween == null or (_tween != null and not _tween.is_running()):
+	if _body_node and (_tween == null or not _tween.is_running()):
 		var lean = create_tween()
 		lean.tween_property(_body_node, "rotation_degrees", Vector3(25, 0, 0), 0.15)
 		lean.tween_property(_body_node, "rotation_degrees", Vector3(0, 0, 0), 0.2)
@@ -171,7 +191,6 @@ func _start_dodge(dir: Vector3) -> void:
 func _handle_combat() -> void:
 	if attack_cd > 0 or is_dodging:
 		return
-	# Mouse OR keyboard attacks
 	var light = Input.is_action_just_pressed("attack_light") or Input.is_key_label_pressed(KEY_Z)
 	var heavy = Input.is_action_just_pressed("attack_heavy") or Input.is_key_label_pressed(KEY_X)
 	if light:
@@ -184,11 +203,16 @@ func _handle_combat() -> void:
 		use_potion()
 
 func _handle_spells() -> void:
-	# Spells use separate cooldowns — not blocked by attack_cd
 	if Input.is_action_just_pressed("blizzard"):
 		_blizzard()
 	if Input.is_action_just_pressed("spartan_rage"):
 		_spartan_rage()
+	if Input.is_key_label_pressed(KEY_1):
+		_lightning_strike()
+	if Input.is_key_label_pressed(KEY_2):
+		_divine_shield()
+	if Input.is_key_label_pressed(KEY_3):
+		_ground_slam()
 
 func _melee_attack(heavy: bool) -> void:
 	if combo_timer > 0:
@@ -201,11 +225,12 @@ func _melee_attack(heavy: bool) -> void:
 	_swing_sword()
 
 	var dmg_mult = 2.0 if heavy else 1.0
-	if combo_count == 2: dmg_mult *= 1.5
-	if rage_active > 0:  dmg_mult *= 1.5
+	if combo_count == 2:
+		dmg_mult *= 1.5
+	if rage_active > 0:
+		dmg_mult *= 1.5
 	var dmg = int(base_damage * dmg_mult)
 
-	# Direct distance check — no collision layers needed
 	var forward = Vector3(sin(rotation.y), 0, cos(rotation.y))
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if not is_instance_valid(e):
@@ -215,7 +240,6 @@ func _melee_attack(heavy: bool) -> void:
 		var dist = diff.length()
 		if dist > melee_range:
 			continue
-		# Must be roughly in front (dot product > -0.3 = ~100° arc)
 		if dist > 0.5 and forward.dot(diff.normalized()) < -0.3:
 			continue
 		var kb = diff.normalized() * 7.0
@@ -254,6 +278,7 @@ func _blizzard() -> void:
 	blizzard_cd = 5.0
 	mana -= 25
 	emit_signal("mana_changed", int(mana), max_mana)
+	_spawn_vfx_sphere(global_position + Vector3(0, 0.5, 0), 9.0, Color(0.4, 0.8, 1.0, 1), 0.6)
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if not is_instance_valid(e):
 			continue
@@ -269,6 +294,159 @@ func _spartan_rage() -> void:
 	rage_active = 6.0
 	mana       -= 30
 	emit_signal("mana_changed", int(mana), max_mana)
+	_spawn_vfx_sphere(global_position + Vector3(0, 1.0, 0), 2.5, Color(1.0, 0.4, 0.0, 1), 0.4)
+
+# --- New spells ---
+
+func _lightning_strike() -> void:
+	if lightning_cd > 0 or mana < 20:
+		return
+	lightning_cd = 4.0
+	mana -= 20
+	emit_signal("mana_changed", int(mana), max_mana)
+
+	# Hit closest enemy in front
+	var best_enemy : Node3D = null
+	var best_dist  : float  = 18.0
+	var forward = Vector3(sin(rotation.y), 0, cos(rotation.y))
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e):
+			continue
+		var diff = e.global_position - global_position
+		diff.y = 0
+		var d = diff.length()
+		if d < best_dist and forward.dot(diff.normalized()) > 0.4:
+			best_dist  = d
+			best_enemy = e
+
+	if best_enemy:
+		best_enemy.take_damage(int(base_damage * 3.0), Vector3.ZERO)
+		_spawn_lightning_vfx(best_enemy.global_position)
+	else:
+		_spawn_lightning_vfx(global_position + forward * 5.0)
+
+func _spawn_lightning_vfx(pos: Vector3) -> void:
+	# Bright yellow-white flash cylinder
+	var vfx = MeshInstance3D.new()
+	var m   = CylinderMesh.new()
+	m.top_radius    = 0.08
+	m.bottom_radius = 0.08
+	m.height        = 6.0
+	vfx.mesh        = m
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color            = Color(1.0, 1.0, 0.3, 1)
+	mat.emission_enabled        = true
+	mat.emission                = Color(1.0, 1.0, 0.2, 1)
+	mat.emission_energy_multiplier = 6.0
+	vfx.set_surface_override_material(0, mat)
+	vfx.global_position = pos + Vector3(0, 3.0, 0)
+	get_parent().add_child(vfx)
+
+	var t = vfx.create_tween()
+	t.tween_property(vfx, "scale", Vector3(3.0, 1.0, 3.0), 0.08)
+	t.tween_property(vfx, "scale", Vector3(0.1, 1.2, 0.1), 0.12)
+	t.tween_property(mat, "albedo_color", Color(1, 1, 1, 0), 0.2)
+	await get_tree().create_timer(0.4).timeout
+	if is_instance_valid(vfx):
+		vfx.queue_free()
+
+func _divine_shield() -> void:
+	if shield_cd > 0 or mana < 20:
+		return
+	shield_cd    = 8.0
+	shield_active = 4.0
+	mana -= 20
+	emit_signal("mana_changed", int(mana), max_mana)
+	invincible = 4.0
+
+	# Spawn shield bubble
+	if _shield_vfx and is_instance_valid(_shield_vfx):
+		_shield_vfx.queue_free()
+	_shield_vfx = MeshInstance3D.new()
+	var m = SphereMesh.new()
+	m.radius = 1.2
+	m.height = 2.4
+	_shield_vfx.mesh = m
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color   = Color(0.3, 0.6, 1.0, 0.25)
+	mat.emission_enabled = true
+	mat.emission       = Color(0.2, 0.5, 1.0, 1)
+	mat.emission_energy_multiplier = 1.5
+	mat.transparency   = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_shield_vfx.set_surface_override_material(0, mat)
+	_shield_vfx.position = Vector3(0, 1.0, 0)
+	add_child(_shield_vfx)
+	_despawn_shield_later()
+
+func _despawn_shield_later() -> void:
+	await get_tree().create_timer(4.0).timeout
+	if _shield_vfx and is_instance_valid(_shield_vfx):
+		var t = create_tween()
+		t.tween_property(_shield_vfx, "scale", Vector3.ZERO, 0.3)
+		await get_tree().create_timer(0.3).timeout
+		if _shield_vfx and is_instance_valid(_shield_vfx):
+			_shield_vfx.queue_free()
+
+func _ground_slam() -> void:
+	if slam_cd > 0 or mana < 30:
+		return
+	slam_cd = 6.0
+	mana   -= 30
+	emit_signal("mana_changed", int(mana), max_mana)
+
+	# Shockwave ring visual
+	var ring = MeshInstance3D.new()
+	var m = TorusMesh.new()
+	m.inner_radius = 0.3
+	m.outer_radius = 0.5
+	ring.mesh = m
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.6, 0.1, 1)
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.5, 0.0, 1)
+	mat.emission_energy_multiplier = 4.0
+	ring.set_surface_override_material(0, mat)
+	ring.global_position = global_position + Vector3(0, 0.1, 0)
+	get_parent().add_child(ring)
+
+	var t = ring.create_tween()
+	t.tween_property(ring, "scale", Vector3(10.0, 0.5, 10.0), 0.4)
+	t.tween_property(mat, "albedo_color", Color(1.0, 0.5, 0.0, 0), 0.3)
+
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e):
+			continue
+		var diff = e.global_position - global_position
+		var d    = diff.length()
+		if d < 6.0:
+			var kb = diff.normalized() * 12.0
+			e.take_damage(int(base_damage * 2.2), kb)
+
+	await get_tree().create_timer(0.7).timeout
+	if is_instance_valid(ring):
+		ring.queue_free()
+
+func _spawn_vfx_sphere(pos: Vector3, radius: float, col: Color, duration: float) -> void:
+	var vfx = MeshInstance3D.new()
+	var m = SphereMesh.new()
+	m.radius = radius
+	m.height = radius * 2.0
+	vfx.mesh = m
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color   = Color(col.r, col.g, col.b, 0.3)
+	mat.emission_enabled = true
+	mat.emission       = col
+	mat.emission_energy_multiplier = 2.0
+	mat.transparency   = BaseMaterial3D.TRANSPARENCY_ALPHA
+	vfx.set_surface_override_material(0, mat)
+	vfx.global_position = pos
+	get_parent().add_child(vfx)
+	var t = vfx.create_tween()
+	t.tween_property(vfx, "scale", Vector3(1.0, 1.0, 1.0), 0.05)
+	t.tween_property(mat, "albedo_color", Color(col.r, col.g, col.b, 0), duration)
+	await get_tree().create_timer(duration + 0.1).timeout
+	if is_instance_valid(vfx):
+		vfx.queue_free()
 
 func _handle_timers(delta: float) -> void:
 	if attack_cd   > 0: attack_cd   -= delta
@@ -279,6 +457,11 @@ func _handle_timers(delta: float) -> void:
 	if rage_cd     > 0: rage_cd     -= delta
 	if axe_cd      > 0: axe_cd      -= delta
 	if blizzard_cd > 0: blizzard_cd -= delta
+	if lightning_cd > 0: lightning_cd -= delta
+	if shield_cd   > 0: shield_cd   -= delta
+	if shield_active > 0:
+		shield_active -= delta
+	if slam_cd     > 0: slam_cd     -= delta
 	if dodge_timer > 0:
 		dodge_timer -= delta
 		if dodge_timer <= 0:
