@@ -339,8 +339,8 @@ func _spawn_lightning_vfx(pos: Vector3) -> void:
 	mat.emission                = Color(1.0, 1.0, 0.2, 1)
 	mat.emission_energy_multiplier = 6.0
 	vfx.set_surface_override_material(0, mat)
-	vfx.global_position = pos + Vector3(0, 3.0, 0)
 	get_parent().add_child(vfx)
+	vfx.global_position = pos + Vector3(0, 3.0, 0)
 
 	var t = vfx.create_tween()
 	t.tween_property(vfx, "scale", Vector3(3.0, 1.0, 3.0), 0.08)
@@ -406,8 +406,8 @@ func _ground_slam() -> void:
 	mat.emission = Color(1.0, 0.5, 0.0, 1)
 	mat.emission_energy_multiplier = 4.0
 	ring.set_surface_override_material(0, mat)
-	ring.global_position = global_position + Vector3(0, 0.1, 0)
 	get_parent().add_child(ring)
+	ring.global_position = global_position + Vector3(0, 0.1, 0)
 
 	var t = ring.create_tween()
 	t.tween_property(ring, "scale", Vector3(10.0, 0.5, 10.0), 0.4)
@@ -439,8 +439,8 @@ func _spawn_vfx_sphere(pos: Vector3, radius: float, col: Color, duration: float)
 	mat.emission_energy_multiplier = 2.0
 	mat.transparency   = BaseMaterial3D.TRANSPARENCY_ALPHA
 	vfx.set_surface_override_material(0, mat)
-	vfx.global_position = pos
 	get_parent().add_child(vfx)
+	vfx.global_position = pos
 	var t = vfx.create_tween()
 	t.tween_property(vfx, "scale", Vector3(1.0, 1.0, 1.0), 0.05)
 	t.tween_property(mat, "albedo_color", Color(col.r, col.g, col.b, 0), duration)
