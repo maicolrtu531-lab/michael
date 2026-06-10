@@ -6,9 +6,15 @@
 @.claude/docs/coding-standards.md
 
 ## Engine & Stack
-- **Engine**: Godot 4.6 (carpeta `godot-wrath/`)
+- **Engine**: Godot 4.6
 - **Language**: GDScript
+- **Build System**: SCons (engine), Godot Export Templates
+- **Asset Pipeline**: Godot Import System + custom resource pipeline
+- **Project Folder**: `godot-wrath/`
 - **Branch**: `claude/festive-fermi-hwmzx0`
+
+## Engine Version Reference
+@docs/engine-reference/godot/VERSION.md
 
 ---
 # Wrath of the Gods — RPG de Acción 3D
