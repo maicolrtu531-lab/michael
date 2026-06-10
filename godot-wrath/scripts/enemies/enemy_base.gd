@@ -31,12 +31,19 @@ var hp_label    : Label3D = null
 var hp_bar_bg   : MeshInstance3D = null
 var hp_bar_fg   : MeshInstance3D = null
 var hp_bar_mat  : StandardMaterial3D = null
+var _head_node_e : MeshInstance3D = null
+var _arm_le      : MeshInstance3D = null
+var _arm_re      : MeshInstance3D = null
+var _leg_le      : MeshInstance3D = null
+var _leg_re      : MeshInstance3D = null
+var _walk_t      : float = 0.0
 
 func _ready() -> void:
 	hp = max_hp
 	add_to_group("enemy")
 	call_deferred("_find_player")
 	_on_ready_extra()
+	call_deferred("_build_limbs")
 	call_deferred("_build_overhead_ui")
 
 func _find_player() -> void:
@@ -144,6 +151,16 @@ func _physics_process(delta: float) -> void:
 	_anim_timer += delta * (3.0 if state == State.CHASE else 1.5)
 	if mesh:
 		mesh.position.y = mesh.position.y + sin(_anim_timer) * 0.008
+
+	# Limb animation
+	if state == State.CHASE or state == State.ATTACK:
+		_walk_t += delta * 6.0
+	var sw = sin(_walk_t) * 0.25
+	if _leg_le: _leg_le.position.z = sw
+	if _leg_re: _leg_re.position.z = -sw
+	if _arm_le: _arm_le.position.z = -sw * 0.6
+	if _arm_re: _arm_re.position.z = sw * 0.6
+
 	move_and_slide()
 	_update_hp_bar()
 
@@ -206,6 +223,18 @@ func _die() -> void:
 			t.tween_method(func(a: float): mat.albedo_color = Color(orig.r, orig.g, orig.b, a), 1.0, 0.0, 0.3)
 	if name_label: name_label.visible = false
 	if hp_label:   hp_label.visible   = false
+	if _head_node_e: _head_node_e.visible = false
+	if _arm_le: _arm_le.visible = false
+	if _arm_re: _arm_re.visible = false
+	if _leg_le: _leg_le.visible = false
+	if _leg_re: _leg_re.visible = false
+
+	# Drop item
+	if player and is_instance_valid(player) and player.has_method("receive_item_drop"):
+		var drop_chance = 0.35 + player.luck * 0.05
+		if randf() < drop_chance:
+			_drop_item()
+
 	emit_signal("died", self)
 	if player and player.has_method("on_enemy_killed"):
 		player.on_enemy_killed(exp_reward, gold_reward)
@@ -214,3 +243,101 @@ func _die() -> void:
 
 func _get_color() -> Color:
 	return Color(0.7, 0.2, 0.8, 1)
+
+func _build_limbs() -> void:
+	var body_col = _get_color()
+
+	_head_node_e = MeshInstance3D.new()
+	var hm = SphereMesh.new()
+	hm.radius = 0.25
+	hm.height = 0.5
+	_head_node_e.mesh = hm
+	var hmat = StandardMaterial3D.new()
+	hmat.albedo_color = Color(body_col.r * 1.1, body_col.g * 0.9, body_col.b * 0.9, 1)
+	_head_node_e.set_surface_override_material(0, hmat)
+	_head_node_e.position = Vector3(0, _get_bar_height() * 0.55, 0)
+	add_child(_head_node_e)
+
+	_arm_le = _make_enemy_limb(body_col)
+	_arm_le.position = Vector3(-0.45, _get_bar_height() * 0.38, 0)
+	add_child(_arm_le)
+
+	_arm_re = _make_enemy_limb(body_col)
+	_arm_re.position = Vector3(0.45, _get_bar_height() * 0.38, 0)
+	add_child(_arm_re)
+
+	_leg_le = _make_enemy_limb(body_col)
+	_leg_le.position = Vector3(-0.2, _get_bar_height() * 0.12, 0)
+	add_child(_leg_le)
+
+	_leg_re = _make_enemy_limb(body_col)
+	_leg_re.position = Vector3(0.2, _get_bar_height() * 0.12, 0)
+	add_child(_leg_re)
+
+func _make_enemy_limb(col: Color) -> MeshInstance3D:
+	var limb = MeshInstance3D.new()
+	var m = CapsuleMesh.new()
+	m.radius = 0.1
+	m.height = 0.5
+	limb.mesh = m
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color = col
+	limb.set_surface_override_material(0, mat)
+	return limb
+
+func _drop_item() -> void:
+	var roll = randf()
+	var item : Dictionary = {}
+	if roll < 0.5:
+		var tier = min(int(randf() * 6), 5)
+		item = player.WEAPON_DROPS[tier].duplicate()
+	else:
+		var tier = min(int(randf() * 6), 5)
+		item = player.ARMOR_DROPS[tier].duplicate()
+	if item.is_empty():
+		return
+
+	# Spawn pickup node
+	var pickup = MeshInstance3D.new()
+	var m = BoxMesh.new()
+	m.size = Vector3(0.4, 0.4, 0.4)
+	pickup.mesh = m
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.85, 0.1, 1) if item.has("damage_bonus") else Color(0.3, 0.7, 1.0, 1)
+	mat.emission_enabled = true
+	mat.emission = mat.albedo_color
+	mat.emission_energy_multiplier = 2.0
+	pickup.set_surface_override_material(0, mat)
+
+	var label = Label3D.new()
+	label.text = item["name"]
+	label.font_size = 18
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.position = Vector3(0, 0.6, 0)
+	pickup.add_child(label)
+
+	get_parent().add_child(pickup)
+	pickup.global_position = global_position + Vector3(0, 0.3, 0)
+
+	# Auto-collect when player walks near
+	_watch_pickup(pickup, item)
+
+func _watch_pickup(pickup: MeshInstance3D, item: Dictionary) -> void:
+	var elapsed = 0.0
+	while elapsed < 15.0:
+		await get_tree().create_timer(0.3).timeout
+		elapsed += 0.3
+		if not is_instance_valid(pickup):
+			return
+		if not is_instance_valid(player):
+			return
+		if pickup.global_position.distance_to(player.global_position) < 1.8:
+			player.receive_item_drop(item)
+			pickup.queue_free()
+			return
+		# Spin the pickup
+		if is_instance_valid(pickup):
+			pickup.rotation.y += 0.3
+	if is_instance_valid(pickup):
+		pickup.queue_free()

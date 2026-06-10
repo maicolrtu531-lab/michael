@@ -169,6 +169,20 @@ func _build_ui() -> void:
 		vb.add_child(cd_lbl)
 		cd_labels[i] = cd_lbl
 
+	# Crosshair
+	var crosshair = ColorRect.new()
+	crosshair.color = Color(1, 1, 1, 0.85)
+	crosshair.size = Vector2(6, 6)
+	crosshair.anchor_left   = 0.5
+	crosshair.anchor_right  = 0.5
+	crosshair.anchor_top    = 0.5
+	crosshair.anchor_bottom = 0.5
+	crosshair.offset_left   = -3
+	crosshair.offset_right  = 3
+	crosshair.offset_top    = -3
+	crosshair.offset_bottom = 3
+	add_child(crosshair)
+
 	# Center: big message
 	msg_label = Label.new()
 	msg_label.text = ""

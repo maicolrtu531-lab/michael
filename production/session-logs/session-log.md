@@ -721,3 +721,49 @@ ee3131d chore: update session log
 production/session-logs/session-log.md
 ---
 
+## Session End: 20260610_172900
+### Commits
+28d795c chore: update session logs
+d7f2aff chore: update session logs
+fd1906e chore: update session logs
+f06f37e chore: update session logs
+e18a2fa feat: 10 waves (+2 enemies/wave), mouse free on menus, input blocked while menus open
+4e1be49 chore: update session logs
+3137fa8 chore: update session logs
+7bf4355 feat: shop, inventory, ability ownership + 3 new spells (★1-★6)
+4a3fad5 chore: update session logs
+fc528e1 chore: update session logs
+06a7178 feat: add enemy HP bars (Label3D) and wired stats menu (TAB)
+f0f6400 chore: update session log
+8bffb9e chore: update session log
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+---
+
+## Session End: 20260610_173735
+### Commits
+28d795c chore: update session logs
+d7f2aff chore: update session logs
+fd1906e chore: update session logs
+f06f37e chore: update session logs
+e18a2fa feat: 10 waves (+2 enemies/wave), mouse free on menus, input blocked while menus open
+4e1be49 chore: update session logs
+3137fa8 chore: update session logs
+7bf4355 feat: shop, inventory, ability ownership + 3 new spells (★1-★6)
+4a3fad5 chore: update session logs
+fc528e1 chore: update session logs
+06a7178 feat: add enemy HP bars (Label3D) and wired stats menu (TAB)
+f0f6400 chore: update session log
+8bffb9e chore: update session log
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+### Uncommitted Changes
+godot-wrath/scripts/enemies/enemy_base.gd
+godot-wrath/scripts/player/player.gd
+godot-wrath/scripts/ui/hud.gd
+production/session-logs/agent-audit.log
+production/session-logs/session-log.md
+---
+

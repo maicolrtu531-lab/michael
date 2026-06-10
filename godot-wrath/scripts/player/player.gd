@@ -16,6 +16,29 @@ var gold        : int   = 0
 var kills       : int   = 0
 var potions     : int   = 3
 var stat_points : int   = 0
+var luck        : int   = 1
+
+var inventory_weapons  : Array = []
+var inventory_armor    : Array = []
+var equipped_weapon    : Dictionary = {}
+var equipped_armor     : Dictionary = {}
+
+const WEAPON_DROPS = [
+	{"name": "Espada de Hierro",    "damage_bonus": 5,  "stars": 1},
+	{"name": "Hacha de Acero",      "damage_bonus": 10, "stars": 2},
+	{"name": "Martillo Nórdico",    "damage_bonus": 16, "stars": 3},
+	{"name": "Espada de Fuego",     "damage_bonus": 24, "stars": 4},
+	{"name": "Mjolnir",             "damage_bonus": 36, "stars": 5},
+	{"name": "Lanza de Odín",       "damage_bonus": 52, "stars": 6},
+]
+const ARMOR_DROPS = [
+	{"name": "Armadura de Cuero",   "defense_bonus": 3,  "stars": 1},
+	{"name": "Cota de Malla",       "defense_bonus": 7,  "stars": 2},
+	{"name": "Armadura de Hierro",  "defense_bonus": 12, "stars": 3},
+	{"name": "Armadura de Acero",   "defense_bonus": 18, "stars": 4},
+	{"name": "Coraza de Valquiria", "defense_bonus": 26, "stars": 5},
+	{"name": "Armadura de Odín",    "defense_bonus": 38, "stars": 6},
+]
 
 var owned_abilities : Array = ["axe", "blizzard"]
 var active_slots    : Array = ["axe", "blizzard", "", "", "", ""]
@@ -58,6 +81,12 @@ var _shield_mesh: MeshInstance3D = null
 var _bob_timer  : float = 0.0
 var _is_moving  : bool  = false
 var _shield_vfx : MeshInstance3D = null
+var _head_node : MeshInstance3D = null
+var _arm_l     : MeshInstance3D = null
+var _arm_r     : MeshInstance3D = null
+var _leg_l     : MeshInstance3D = null
+var _leg_r     : MeshInstance3D = null
+var _walk_timer: float = 0.0
 
 signal health_changed(current, maximum)
 signal mana_changed(current, maximum)
@@ -79,6 +108,55 @@ func _ready() -> void:
 	_sword_node  = get_node_or_null("Sword")
 	_body_node   = get_node_or_null("Body")
 	_shield_mesh = get_node_or_null("Shield")
+	_build_body()
+
+func _build_body() -> void:
+	# Head
+	_head_node = MeshInstance3D.new()
+	var head_mesh = SphereMesh.new()
+	head_mesh.radius = 0.22
+	head_mesh.height = 0.44
+	_head_node.mesh = head_mesh
+	var head_mat = StandardMaterial3D.new()
+	head_mat.albedo_color = Color(0.85, 0.72, 0.58, 1)
+	_head_node.set_surface_override_material(0, head_mat)
+	_head_node.position = Vector3(0, 1.7, 0)
+	add_child(_head_node)
+
+	# Torso already exists as $Body — just recolor it skin-tone
+	if _body_node:
+		var mat = _body_node.get_surface_override_material(0)
+		if mat:
+			mat.albedo_color = Color(0.25, 0.35, 0.65, 1)  # blue armor
+
+	# Arms
+	_arm_l = _make_limb(Color(0.25, 0.35, 0.65, 1))
+	_arm_l.position = Vector3(-0.38, 1.15, 0)
+	add_child(_arm_l)
+
+	_arm_r = _make_limb(Color(0.25, 0.35, 0.65, 1))
+	_arm_r.position = Vector3(0.38, 1.15, 0)
+	add_child(_arm_r)
+
+	# Legs
+	_leg_l = _make_limb(Color(0.18, 0.18, 0.28, 1))
+	_leg_l.position = Vector3(-0.18, 0.4, 0)
+	add_child(_leg_l)
+
+	_leg_r = _make_limb(Color(0.18, 0.18, 0.28, 1))
+	_leg_r.position = Vector3(0.18, 0.4, 0)
+	add_child(_leg_r)
+
+func _make_limb(col: Color) -> MeshInstance3D:
+	var limb = MeshInstance3D.new()
+	var m = CapsuleMesh.new()
+	m.radius = 0.09
+	m.height = 0.45
+	limb.mesh = m
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color = col
+	limb.set_surface_override_material(0, mat)
+	return limb
 
 func _animate(delta: float) -> void:
 	var moving = velocity.length() > 1.0 and is_on_floor()
@@ -103,6 +181,17 @@ func _animate(delta: float) -> void:
 		if mat and mat.emission_enabled:
 			mat.emission_energy_multiplier = 0.0
 			mat.emission_enabled = false
+
+	# Limb walk animation
+	if moving:
+		_walk_timer += delta * 8.0
+	var leg_swing = sin(_walk_timer) * 0.28
+	if _leg_l: _leg_l.position.z = leg_swing
+	if _leg_r: _leg_r.position.z = -leg_swing
+	if _arm_l: _arm_l.position.z = -leg_swing * 0.5
+	if _arm_r: _arm_r.position.z = leg_swing * 0.5
+	if _head_node:
+		_head_node.position.y = 1.7 + sin(_bob_timer) * 0.02
 
 	# Shield bubble pulse
 	if _shield_vfx and is_instance_valid(_shield_vfx):
@@ -655,3 +744,25 @@ func buy_health_potion() -> void:
 
 func buy_strength_potion() -> void:
 	base_damage += 8
+
+func receive_item_drop(item: Dictionary) -> void:
+	if item.has("damage_bonus"):
+		inventory_weapons.append(item)
+	elif item.has("defense_bonus"):
+		inventory_armor.append(item)
+
+func equip_weapon(idx: int) -> void:
+	if idx >= inventory_weapons.size():
+		return
+	if not equipped_weapon.is_empty():
+		base_damage -= equipped_weapon.get("damage_bonus", 0)
+	equipped_weapon = inventory_weapons[idx]
+	base_damage += equipped_weapon.get("damage_bonus", 0)
+
+func equip_armor(idx: int) -> void:
+	if idx >= inventory_armor.size():
+		return
+	if not equipped_armor.is_empty():
+		defense -= equipped_armor.get("defense_bonus", 0)
+	equipped_armor = inventory_armor[idx]
+	defense += equipped_armor.get("defense_bonus", 0)
