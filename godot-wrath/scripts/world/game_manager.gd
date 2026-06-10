@@ -187,7 +187,7 @@ func _get_spawn_point() -> Vector3:
 		var pts = spawn_points.get_children()
 		if pts.size() > 0:
 			return pts[randi() % pts.size()].global_position + Vector3(0, 1, 0)
-	return Vector3(randf_range(-18, 18), 1, randf_range(-18, 18))
+	return Vector3(randf_range(-10, 10), 1, randf_range(-10, 10))
 
 func _on_enemy_died(_enemy) -> void:
 	enemies_alive -= 1

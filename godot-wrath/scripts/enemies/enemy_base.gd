@@ -4,7 +4,7 @@ extends CharacterBody3D
 @export var move_speed   : float = 3.5
 @export var attack_dmg   : int   = 12
 @export var attack_range : float = 1.8
-@export var detect_range : float = 14.0
+@export var detect_range : float = 50.0
 @export var exp_reward   : int   = 40
 @export var gold_reward  : int   = 8
 @export var enemy_name   : String = "Enemy"
