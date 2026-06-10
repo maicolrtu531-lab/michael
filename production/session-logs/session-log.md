@@ -1300,3 +1300,80 @@ ee3131d chore: update session log
 production/session-logs/session-log.md
 ---
 
+## Session End: 20260610_191155
+### Commits
+1bdd5f2 chore: update session logs
+78cda98 fix: force CHASE on spawn + debug prints para diagnosticar enemigos que no aparecen
+c3a7404 chore: update session logs
+28a887c chore: update session logs
+ba31fa0 fix: berserkers stuck in IDLE — increase detect_range to 50, reduce spawn fallback range
+28ac256 chore: update session logs
+9ebb16f fix: countdown entre oleadas + timer 3s — el jugador ve cuándo llega la siguiente oleada
+94b1cdb chore: update session logs
+31737a4 chore: update session logs
+c51bd0b feat: sistema de mundos infinitos + fix oleadas (waves 1-10 → mundo siguiente)
+6dfa1c7 chore: update session logs
+a232a54 fix: pickup autónomo (item_pickup.gd), cursor confinado, espada con forma real
+f2678a0 chore: update session logs
+b03afc1 chore: update session logs
+4ffa1f2 feat: crosshair, limbs, 4-tab inventory, enemy drops, luck stat
+254689b feat: crosshair, character limbs, 4-tab inventory, enemy drops, luck stat
+8ee29a2 fix: remove duplicate 'moving' var in _animate()
+28d795c chore: update session logs
+d7f2aff chore: update session logs
+fd1906e chore: update session logs
+f06f37e chore: update session logs
+e18a2fa feat: 10 waves (+2 enemies/wave), mouse free on menus, input blocked while menus open
+4e1be49 chore: update session logs
+3137fa8 chore: update session logs
+7bf4355 feat: shop, inventory, ability ownership + 3 new spells (★1-★6)
+4a3fad5 chore: update session logs
+fc528e1 chore: update session logs
+06a7178 feat: add enemy HP bars (Label3D) and wired stats menu (TAB)
+f0f6400 chore: update session log
+8bffb9e chore: update session log
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+---
+
+## Session End: 20260610_201022
+### Commits
+45d7e34 fix: emit died signal antes del drop para que crash en drop_item no bloquee oleadas
+1bdd5f2 chore: update session logs
+78cda98 fix: force CHASE on spawn + debug prints para diagnosticar enemigos que no aparecen
+c3a7404 chore: update session logs
+28a887c chore: update session logs
+ba31fa0 fix: berserkers stuck in IDLE — increase detect_range to 50, reduce spawn fallback range
+28ac256 chore: update session logs
+9ebb16f fix: countdown entre oleadas + timer 3s — el jugador ve cuándo llega la siguiente oleada
+94b1cdb chore: update session logs
+31737a4 chore: update session logs
+c51bd0b feat: sistema de mundos infinitos + fix oleadas (waves 1-10 → mundo siguiente)
+6dfa1c7 chore: update session logs
+a232a54 fix: pickup autónomo (item_pickup.gd), cursor confinado, espada con forma real
+f2678a0 chore: update session logs
+b03afc1 chore: update session logs
+4ffa1f2 feat: crosshair, limbs, 4-tab inventory, enemy drops, luck stat
+254689b feat: crosshair, character limbs, 4-tab inventory, enemy drops, luck stat
+8ee29a2 fix: remove duplicate 'moving' var in _animate()
+28d795c chore: update session logs
+d7f2aff chore: update session logs
+fd1906e chore: update session logs
+f06f37e chore: update session logs
+e18a2fa feat: 10 waves (+2 enemies/wave), mouse free on menus, input blocked while menus open
+4e1be49 chore: update session logs
+3137fa8 chore: update session logs
+7bf4355 feat: shop, inventory, ability ownership + 3 new spells (★1-★6)
+4a3fad5 chore: update session logs
+fc528e1 chore: update session logs
+06a7178 feat: add enemy HP bars (Label3D) and wired stats menu (TAB)
+f0f6400 chore: update session log
+8bffb9e chore: update session log
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+### Uncommitted Changes
+production/session-logs/session-log.md
+---
+
