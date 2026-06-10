@@ -1027,3 +1027,33 @@ ee3131d chore: update session log
 production/session-logs/session-log.md
 ---
 
+## Session End: 20260610_184735
+### Commits
+94b1cdb chore: update session logs
+31737a4 chore: update session logs
+c51bd0b feat: sistema de mundos infinitos + fix oleadas (waves 1-10 → mundo siguiente)
+6dfa1c7 chore: update session logs
+a232a54 fix: pickup autónomo (item_pickup.gd), cursor confinado, espada con forma real
+f2678a0 chore: update session logs
+b03afc1 chore: update session logs
+4ffa1f2 feat: crosshair, limbs, 4-tab inventory, enemy drops, luck stat
+254689b feat: crosshair, character limbs, 4-tab inventory, enemy drops, luck stat
+8ee29a2 fix: remove duplicate 'moving' var in _animate()
+28d795c chore: update session logs
+d7f2aff chore: update session logs
+fd1906e chore: update session logs
+f06f37e chore: update session logs
+e18a2fa feat: 10 waves (+2 enemies/wave), mouse free on menus, input blocked while menus open
+4e1be49 chore: update session logs
+3137fa8 chore: update session logs
+7bf4355 feat: shop, inventory, ability ownership + 3 new spells (★1-★6)
+4a3fad5 chore: update session logs
+fc528e1 chore: update session logs
+06a7178 feat: add enemy HP bars (Label3D) and wired stats menu (TAB)
+f0f6400 chore: update session log
+8bffb9e chore: update session log
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+---
+

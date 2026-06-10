@@ -70,8 +70,17 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if between_waves:
 		wave_timer -= delta
+		# Show countdown
+		if hud and wave_timer > 0:
+			var next = current_wave + 1
+			if next < WAVE_TEMPLATES.size():
+				hud.show_countdown("Próxima oleada: %d" % ceili(wave_timer))
+			else:
+				hud.show_countdown("Próximo mundo: %d" % ceili(wave_timer))
 		if wave_timer <= 0:
 			between_waves = false
+			if hud:
+				hud.clear_countdown()
 			current_wave += 1
 			if current_wave >= WAVE_TEMPLATES.size():
 				_next_world()
@@ -187,7 +196,7 @@ func _on_enemy_died(_enemy) -> void:
 		if hud:
 			hud.show_message("OLEADA COMPLETADA!", Color.GREEN)
 		between_waves = true
-		wave_timer    = 4.0
+		wave_timer    = 3.0
 
 func _on_enemy_kill_gold() -> void:
 	if player and "gold" in player:

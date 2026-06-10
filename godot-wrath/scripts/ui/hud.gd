@@ -8,7 +8,8 @@ var wave_label : Label
 var kills_label: Label
 var level_label: Label
 var gold_label : Label
-var msg_label  : Label
+var msg_label      : Label
+var countdown_label: Label
 var msg_timer  : float = 0.0
 var kill_count : int   = 0
 
@@ -197,6 +198,22 @@ func _build_ui() -> void:
 	msg_label.add_theme_font_size_override("font_size", 32)
 	add_child(msg_label)
 
+	# Countdown label — below center
+	countdown_label = Label.new()
+	countdown_label.text = ""
+	countdown_label.anchor_left   = 0.5
+	countdown_label.anchor_right  = 0.5
+	countdown_label.anchor_top    = 0.5
+	countdown_label.anchor_bottom = 0.5
+	countdown_label.offset_left   = -160
+	countdown_label.offset_top    = 30
+	countdown_label.offset_right  = 160
+	countdown_label.offset_bottom = 60
+	countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	countdown_label.add_theme_font_size_override("font_size", 20)
+	countdown_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2, 1))
+	add_child(countdown_label)
+
 func _process(delta: float) -> void:
 	if msg_timer > 0:
 		msg_timer -= delta
@@ -276,6 +293,14 @@ func update_wave(wave_num: int) -> void:
 
 func update_wave_label(text: String) -> void:
 	wave_label.text = text
+
+func show_countdown(text: String) -> void:
+	if countdown_label:
+		countdown_label.text = text
+
+func clear_countdown() -> void:
+	if countdown_label:
+		countdown_label.text = ""
 
 func update_gold(amount: int) -> void:
 	gold_label.text = "Gold: %d" % amount
