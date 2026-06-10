@@ -496,3 +496,25 @@ ee3131d chore: update session log
 production/session-logs/session-log.md
 ---
 
+## Session End: 20260610_153541
+### Commits
+f0f6400 chore: update session log
+8bffb9e chore: update session log
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+---
+
+## Session End: 20260610_154307
+### Commits
+06a7178 feat: add enemy HP bars (Label3D) and wired stats menu (TAB)
+f0f6400 chore: update session log
+8bffb9e chore: update session log
+ee3131d chore: update session log
+24aab8a chore: update session log
+1d2b63a fix: use tween_method for alpha fade on enemy death (scope + subprop fix)
+### Uncommitted Changes
+production/session-logs/agent-audit.log
+production/session-logs/session-log.md
+---
+
