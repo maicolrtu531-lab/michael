@@ -216,9 +216,13 @@ func _die() -> void:
 	state   = State.DEAD
 	velocity = Vector3.ZERO
 	if mesh:
+		var mat = mesh.get_surface_override_material(0)
+		if mat:
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		var t = create_tween()
 		t.tween_property(mesh, "scale", Vector3(1.3, 0.1, 1.3), 0.5)
-		t.tween_property(mesh, "modulate", Color(1, 1, 1, 0), 0.3)
+		if mat:
+			t.tween_property(mat, "albedo_color:a", 0.0, 0.3)
 	if name_label:  name_label.visible  = false
 	if hp_bar_bg:   hp_bar_bg.visible   = false
 	if hp_bar_fg:   hp_bar_fg.visible   = false
