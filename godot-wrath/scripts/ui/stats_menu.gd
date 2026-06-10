@@ -9,10 +9,11 @@ var stat_labels : Array = []
 var stat_btns   : Array = []
 
 const STATS = [
-	{"key": "Fuerza",        "var": "base_damage", "inc": 4,   "label": "Ataque"},
-	{"key": "Vitalidad",     "var": "max_hp",      "inc": 25,  "label": "Vida máx"},
-	{"key": "Agilidad",      "var": "move_speed",  "inc": 0.6, "label": "Velocidad"},
-	{"key": "Inteligencia",  "var": "max_mana",    "inc": 12,  "label": "Maná máx"},
+	{"key": "Fuerza",        "var": "base_damage", "inc": 4,   "label": "Fuerza (ATQ)"},
+	{"key": "Vitalidad",     "var": "max_hp",      "inc": 25,  "label": "Vitalidad (HP)"},
+	{"key": "Agilidad",      "var": "move_speed",  "inc": 0.6, "label": "Agilidad (VEL)"},
+	{"key": "Inteligencia",  "var": "max_mana",    "inc": 12,  "label": "Poderes (MP)"},
+	{"key": "Suerte",        "var": "luck",        "inc": 1,   "label": "Suerte (drops)"},
 ]
 
 func _ready() -> void:
@@ -26,8 +27,8 @@ func _build_ui() -> void:
 	panel.anchor_bottom = 0.5
 	panel.offset_left   = -160
 	panel.offset_right  = 160
-	panel.offset_top    = -180
-	panel.offset_bottom = 180
+	panel.offset_top    = -210
+	panel.offset_bottom = 210
 	panel.visible = false
 	add_child(panel)
 
@@ -117,6 +118,7 @@ func _refresh() -> void:
 		player.max_hp,
 		player.move_speed,
 		player.max_mana,
+		player.luck,
 	]
 	for i in range(STATS.size()):
 		var s    = STATS[i]
