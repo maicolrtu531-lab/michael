@@ -4,6 +4,7 @@ var current_wave   : int   = 0
 var current_world  : int   = 1
 var enemies_alive  : int   = 0
 var wave_timer     : float = 0.0
+var wave_timeout   : float = 0.0
 var between_waves  : bool  = false
 var total_gold     : int   = 0
 
@@ -68,6 +69,14 @@ func _ready() -> void:
 	_start_wave(0)
 
 func _process(delta: float) -> void:
+	# Wave timeout: if enemies get stuck, force-advance after 90s
+	if not between_waves and enemies_alive > 0:
+		wave_timeout -= delta
+		if wave_timeout <= 0:
+			print("Wave timeout — forcing wave clear")
+			enemies_alive = 0
+			_on_enemy_died(null)
+
 	if between_waves:
 		wave_timer -= delta
 		# Show countdown
@@ -144,6 +153,7 @@ func _start_wave(wave_idx: int) -> void:
 
 	var template = WAVE_TEMPLATES[wave_idx]
 	enemies_alive = 0
+	wave_timeout  = 90.0
 
 	for group in template:
 		for i in range(group["count"]):
@@ -154,7 +164,7 @@ func _start_wave(wave_idx: int) -> void:
 				# Force enemy to find and chase player immediately
 				if player and is_instance_valid(player):
 					enemy.player = player
-					enemy.state  = enemy.State.CHASE
+					enemy.state  = 1  # State.CHASE
 	print("Wave %d started — enemies_alive: %d" % [wave_num, enemies_alive])
 
 	# Safety: if no enemies spawned, advance after a short delay

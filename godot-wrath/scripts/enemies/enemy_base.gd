@@ -18,7 +18,7 @@ var gravity_vel  : float = 0.0
 var _anim_timer  : float = 0.0
 
 enum State { IDLE, CHASE, ATTACK, DEAD }
-var state  : State = State.IDLE
+var state  : State = State.CHASE
 var player : Node3D = null
 
 signal died(enemy)
@@ -49,6 +49,8 @@ func _ready() -> void:
 
 func _find_player() -> void:
 	player = get_tree().get_first_node_in_group("player")
+	if player:
+		state = State.CHASE
 
 func _on_ready_extra() -> void:
 	pass
