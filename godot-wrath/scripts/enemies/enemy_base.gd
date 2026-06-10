@@ -45,6 +45,7 @@ func _ready() -> void:
 	_on_ready_extra()
 	call_deferred("_build_limbs")
 	call_deferred("_build_overhead_ui")
+	print("Enemy ready: %s  hp=%d" % [enemy_name, hp])
 
 func _find_player() -> void:
 	player = get_tree().get_first_node_in_group("player")
@@ -210,6 +211,7 @@ func freeze(duration: float = 2.0) -> void:
 			mat.albedo_color = Color(0.6, 0.9, 1.0, 1)
 
 func _die() -> void:
+	print("Enemy died: %s" % enemy_name)
 	is_dead = true
 	state   = State.DEAD
 	velocity = Vector3.ZERO

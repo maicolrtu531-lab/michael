@@ -151,6 +151,11 @@ func _start_wave(wave_idx: int) -> void:
 			if enemy:
 				enemies_alive += 1
 				enemy.died.connect(_on_enemy_died)
+				# Force enemy to find and chase player immediately
+				if player and is_instance_valid(player):
+					enemy.player = player
+					enemy.state  = enemy.State.CHASE
+	print("Wave %d started — enemies_alive: %d" % [wave_num, enemies_alive])
 
 	# Safety: if no enemies spawned, advance after a short delay
 	if enemies_alive == 0:
