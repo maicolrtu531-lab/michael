@@ -23,11 +23,16 @@ const BERSERKER = preload("res://scenes/enemies/berserker.tscn")
 const BALDUR    = preload("res://scenes/enemies/baldur_boss.tscn")
 
 var WAVES : Array = [
-	[{"type": "Draugr",    "count": 4}],
-	[{"type": "Draugr",    "count": 4}, {"type": "Berserker", "count": 2}],
-	[{"type": "Berserker", "count": 3}, {"type": "Draugr",    "count": 3}],
-	[{"type": "Draugr",    "count": 5}, {"type": "Berserker", "count": 3}],
-	[{"type": "Baldur",    "count": 1}],
+	[{"type": "Draugr",    "count": 2}],
+	[{"type": "Draugr",    "count": 3}, {"type": "Draugr",    "count": 1}],
+	[{"type": "Draugr",    "count": 3}, {"type": "Berserker", "count": 3}],
+	[{"type": "Draugr",    "count": 4}, {"type": "Berserker", "count": 4}],
+	[{"type": "Berserker", "count": 4}, {"type": "Draugr",    "count": 6}],
+	[{"type": "Draugr",    "count": 5}, {"type": "Berserker", "count": 7}],
+	[{"type": "Berserker", "count": 6}, {"type": "Draugr",    "count": 8}],
+	[{"type": "Draugr",    "count": 7}, {"type": "Berserker", "count": 9}],
+	[{"type": "Berserker", "count": 8}, {"type": "Draugr",    "count": 10}],
+	[{"type": "Draugr",    "count": 6}, {"type": "Berserker", "count": 6}, {"type": "Baldur", "count": 1}],
 ]
 
 func _ready() -> void:
@@ -68,19 +73,43 @@ func _process(delta: float) -> void:
 			else:
 				_start_wave(current_wave)
 
+func _any_menu_open() -> bool:
+	var sm = stats_menu and stats_menu.visible_flag
+	var sh = shop_menu  and shop_menu.visible_flag
+	var iv = inventory_menu and inventory_menu.visible_flag
+	return sm or sh or iv
+
+func _update_mouse_mode() -> void:
+	var open = _any_menu_open()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if open else Input.MOUSE_MODE_CONFINED_HIDDEN
+	if player:
+		player.menu_open = open
+
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_ESCAPE:
-			get_tree().quit()
+			if _any_menu_open():
+				if stats_menu and stats_menu.visible_flag:
+					stats_menu.toggle()
+				if shop_menu and shop_menu.visible_flag:
+					shop_menu.toggle()
+				if inventory_menu and inventory_menu.visible_flag:
+					inventory_menu.toggle()
+				_update_mouse_mode()
+			else:
+				get_tree().quit()
 		elif event.keycode == KEY_TAB:
 			if stats_menu:
 				stats_menu.toggle()
+				_update_mouse_mode()
 		elif event.keycode == KEY_B:
 			if shop_menu:
 				shop_menu.toggle()
+				_update_mouse_mode()
 		elif event.keycode == KEY_I:
 			if inventory_menu:
 				inventory_menu.toggle()
+				_update_mouse_mode()
 
 func _start_wave(wave_idx: int) -> void:
 	emit_signal("wave_started", wave_idx + 1)

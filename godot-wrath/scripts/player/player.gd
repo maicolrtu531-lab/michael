@@ -49,6 +49,8 @@ var locked_target : Node3D = null
 var lock_range    : float  = 14.0
 var melee_range   : float  = 2.5
 
+var menu_open   : bool  = false
+
 var _tween      : Tween = null
 var _sword_node : MeshInstance3D = null
 var _body_node  : MeshInstance3D = null
@@ -107,6 +109,8 @@ func _animate(delta: float) -> void:
 		_shield_vfx.scale = Vector3.ONE * (1.0 + sin(_bob_timer * 3.0) * 0.05)
 
 func _input(event: InputEvent) -> void:
+	if menu_open:
+		return
 	if event is InputEventMouseMotion and not locked_target:
 		cam_yaw   -= event.relative.x * 0.003
 		cam_pitch  = clamp(cam_pitch - event.relative.y * 0.003,
